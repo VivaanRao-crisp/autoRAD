@@ -1,44 +1,56 @@
-# autoRAD - parametric CAD-by-script (Step 1: parameters + kinematics)
+# autoRAD - parametric CAD-by-script (architecture E: reeved cable + carriage + slotted bell-crank handles)
 
 All values are PRELIMINARY. Nothing here is validated; only prototype tests can do that.
+Design reasoning: `docs/main_design.md` (rev 2).
 
 ## Run
 ```
 python3 kinematics.py
 ```
-Needs only the Python standard library for now. CadQuery and cq_gears are needed from Step 2 (parts).
+Needs only the Python standard library for now. CadQuery and cq_gears are needed from the parts step.
 
 ## Files
 - `params.py` - every dimension and design variable (units in comments, TODOs marked)
-- `kinematics.py` - handle angle, spool rotation, ratio, gear-stage suggestion, PASS/FAIL checks
-- `parts/` - empty; one script per part later. `out/` - generated STEP/STL (git-ignored)
+- `kinematics.py` - angle mapping, bell-crank geometry, carriage force balance, slot (cam) profile,
+  pressure angle, PASS/FAIL checks, plus a short reference table for the spool+gear architecture A
+- `docs/main_design.md` - design study: 5 architectures, weighted comparison, recommendation, risks
+- `parts/` - empty; one script per part later. `out/` - generated files (git-ignored)
+
+## What kinematics.py prints
+1. Bell-crank geometry for ΔS = 60 / 70 / 80 mm: L_LINE, pivot spacing P, width proxy, hand torques
+2. Angle, line angle, carriage position and grip separation vs travel
+3. Carriage force balance (pin, spring, friction, cable tension on down/up stroke) for the
+   ΔS × F_hand grid, with the first slack point if any
+4. Slot centre line for the right arm (arm frame, origin at the pivot) and pressure angle
+5. Checks: hand spacing, cable never slack, R0, R_load, housing width, pressure angle, angle range
+6. Reference: architecture A ratios and stage counts
 
 ## The math (also in code comments)
-- Each handle rotates (110 - 50) / 2 = 30 deg. Mapping is linear over 300 mm, clamped at 110 deg after.
-- Spool rotation = payout / r. Ratio = spool rotation / handle rotation, e.g. r = 12: (300/12) / 0.5236 rad = 47.7.
-- Stages: smallest n with (max stage ratio)^n >= ratio. Tooth counts: 12-tooth pinions, last stage absorbs rounding.
-- Grip separation = pivot_spacing + 2 * 127 * sin(25 deg) = 107.3 mm (>= 106 needed, only 1.3 mm margin).
+- Each handle rotates 30 deg over 300 mm (linear), then dwells to 400 mm.
+- k = 300 / 0.5236 rad = 573 mm of cable per rad of handle; carriage: dy/dβ = k / N_REEVE = 143 mm/rad.
+- Hand torque T = F · L_LINE · sin θ (θ > 0 closing). Pin force = 2T / (dy/dβ). Cable tension =
+  (spring + pin ± friction) / N_REEVE.
+- Slot point = Rot(−β) · (pin − pivot), pin = (0, Y0 + s/N_REEVE), pivot = (P/2, 0).
+- Geometry: L_LINE = ΔS / (2(sin θ_open − sin θ_closed)), P = S_closed − 2 L_LINE sin θ_closed.
+
+## Current status of the checks (python3 kinematics.py, 2026-11-10)
+Hand spacing PASS (106.0), cable never slack PASS, R0 = 9.0 N PASS, R_load = 40.7 N vs 40 N
+**FAIL (marginal, goal TODO)**, housing width 139 mm PASS, pressure angle 52 deg PASS, angle range PASS.
 
 ## Assumptions I made (please confirm or correct)
-1. Cable payout equals attachment travel (1:1, no pulley multiplier).
-2. Spool radius is the effective radius at the cable (no cable thickness/layering).
-3. Both handles pivot about one common point (pivot spacing = 0). This makes the hand-spacing check optimistic or exact depending on the real layout.
-4. Final stage drives two meshing sector gears, 1:1 between handles, so the spool->one-handle ratio is the whole ratio.
-5. Spool candidates step by 3 mm (12, 15, ... 30).
-6. Gear planning placeholders: module 1.0 mm, min 12 teeth, max 6:1 per stage, equal pinions per stage.
-7. Housing-width check is a PROXY (largest gear or spool diameter + 2 walls + 2 clearances). It ignores handles, bearings, mount and spring, so a PASS means little yet.
-8. "Handle angle range" check only tests the formula endpoints and hard-stop clamp, not any mechanism.
+1. F_HAND = 200 N per hand, vertical, equal both hands (Q5 unknown).
+2. Efficiency ETA_MECH = 0.8; friction modelled as (1 − η)(spring + |pin|) opposing carriage motion.
+3. Reference cable hangs parallel to the main cable from an anchor above (1:1 payout).
+4. Pulley 30 mm for 1.5 mm cable (rule-of-thumb, not a standard).
+5. Pressure-angle limit 55 deg for a rolling follower (test on prototype).
+6. Housing width proxy = P + 2 × 20 mm pivot boss.
+7. Linear angle-vs-travel profile (PROFILE = "linear").
+8. THETA_CLOSED_DEG = +3 deg bias so the hand torque is always closing (docs Section 6).
+9. Y0_PIN_MM = 150 mm (pin height at closed) to keep the pressure angle under 55 deg.
 
 ## Open questions
-1. Is pivot spacing really 0, or do the handles sit on separate axes? What value?
-2. Does the cable route 1:1 or via a pulley (changes payout per mm)?
-3. Does the 300 mm map stroke stay fixed, or should the ratio be re-chosen per user within 250-400 mm (see table 3)?
-4. Definition of "actuation resistance <= 10 N" (force at the handle pull, at the cable, return-spring force, friction?).
-5. Gear module, pressure angle, face width, and printed material for FDM gears.
-6. Housing orientation: which dimension is "width" (along the handle spread?) so the width check can be real.
-7. Is the 1.3 mm hand-spacing margin acceptable given grip diameter 32 mm and the angle tolerance of a printed hard stop?
-8. Is "grip centre ~127 mm" measured along the handle axis or straight-line from the pivot?
-9. Should the final-stage tooth count be allowed to have a non-integer ratio error (currently within ~1%)?
-
-## Observed in the first run
-Candidate radii 12-15 mm need 3 stages; 18-30 mm need 2 stages (at the 6:1 per-stage placeholder).
+Answered in rev 2: Q1-Q4, Q7-Q10 (see docs Section 1.4). Still open:
+- Q5 stack loads (TODO), Q6 machine details (TODO)
+- Q11 R_load goal: 40.7 N at ΔS = 70 vs the 10 %-of-stack goal of 40 N. ΔS = 60 gives 36 N.
+- Q12 housing height: carriage pin reaches 250 mm above the pivots at 400 mm travel (N_REEVE = 4).
+- Pivot bolts: M6/M8 wanted for the two handle pivots (brief lists M3/M4).

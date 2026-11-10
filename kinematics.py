@@ -1,178 +1,290 @@
-"""kinematics.py - handle angle, spool rotation, gear ratio and checks for autoRAD.
+"""kinematics.py - angle mapping, slot profile, carriage force balance and checks for autoRAD.
 
 Run:  python3 kinematics.py
-All inputs come from params.py. Results are preliminary calculations, not validation.
+All inputs come from params.py. These are preliminary calculations, not validation.
+
+Sign conventions (right-hand handle, looking at the user's frontal plane):
+  x = outward (+ to the right), y = up. Pivot of the right handle at (+P/2, 0).
+  The carriage pin sits on the centre line at (0, y_pin), y_pin = Y0 + s / N_REEVE.
+  Opening = the grip (below the pivot) moves outward = counter-clockwise rotation of the handle.
+  Pin force: positive = DOWN on the carriage (closing direction, same sense as the spring).
 """
 import math
 import params as p
 
 
-# ------------------------------------------------------------------ handle motion
-def included_angle_deg(stroke_mm):
-    """Included angle between handles [deg] at a given attachment travel [mm].
+# ------------------------------------------------------------------ angle mapping
+def stroke_fraction(stroke_mm):
+    """Fraction 0..1 of the mapping stroke, clamped (the dwell holds 1.0)."""
+    return min(max(stroke_mm / p.STROKE_MAP_MM, 0.0), 1.0)
 
-    Linear map: fraction f = stroke / STROKE_MAP_MM, clamped to 0..1 (hard stop at 110 deg).
-        angle = closed + f * (open - closed)
-    """
-    f = min(max(stroke_mm / p.STROKE_MAP_MM, 0.0), 1.0)
-    return p.ANGLE_INCLUDED_CLOSED_DEG + f * (p.ANGLE_INCLUDED_OPEN_DEG - p.ANGLE_INCLUDED_CLOSED_DEG)
+
+def profile(fraction):
+    """Map stroke fraction -> opening fraction. v1 linear; other profiles go here (one parameter)."""
+    if p.PROFILE == "linear":
+        return fraction
+    raise NotImplementedError("TODO: profile '%s' not defined" % p.PROFILE)
 
 
 def handle_rotation_deg(stroke_mm):
-    """Rotation of ONE handle from its closed position [deg] (half the included-angle change)."""
-    return (included_angle_deg(stroke_mm) - p.ANGLE_INCLUDED_CLOSED_DEG) / 2.0
+    """Rotation of ONE handle from closed [deg] = 30 deg * profile(fraction)."""
+    return p.ANGLE_PER_HANDLE_DEG * profile(stroke_fraction(stroke_mm))
 
 
-# ------------------------------------------------------------------ spool and ratio
-def spool_rotation_rad(stroke_mm, spool_radius_mm):
-    """Spool rotation [rad] for a given travel.
+def included_angle_deg(stroke_mm):
+    """Included angle between the grip tubes [deg] = closed angle + 2 * handle rotation."""
+    return p.ANGLE_INCLUDED_CLOSED_DEG + 2.0 * handle_rotation_deg(stroke_mm)
 
-    Cable payout = stroke * CABLE_PAYOUT_PER_MM_TRAVEL; arc length = radius * angle, so
-        theta_spool = payout / radius
+
+def theta_deg(stroke_mm):
+    """Angle of the pivot->grip-centre line from vertical [deg], outward positive."""
+    return p.THETA_CLOSED_DEG + handle_rotation_deg(stroke_mm)
+
+
+def carriage_y_mm(stroke_mm):
+    """Height of the carriage pin above the pivot line [mm]: y = Y0 + s / N_REEVE (no clamp: dwell)."""
+    s = min(max(stroke_mm, 0.0), p.STROKE_DWELL_END_MM)
+    return p.Y0_PIN_MM + s * p.CABLE_PAYOUT_PER_MM_TRAVEL / p.N_REEVE
+
+
+# ------------------------------------------------------------------ hand spacing and torque
+def grip_separation_mm(stroke_mm, delta_s_mm=p.DELTA_S_MM):
+    """Grip-centre separation [mm] = P + 2 L sin(theta)."""
+    L = p.line_length_mm(delta_s_mm)
+    return p.pivot_spacing_mm(delta_s_mm) + 2.0 * L * math.sin(math.radians(theta_deg(stroke_mm)))
+
+
+def hand_torque_nm(stroke_mm, f_hand_n, delta_s_mm=p.DELTA_S_MM):
+    """Torque on ONE handle from a vertical hand force [N m], positive = CLOSING.
+
+    T = F * L_LINE * sin(theta)   (theta < 0 means the grip is inboard of the pivot -> opening)
     """
-    return stroke_mm * p.CABLE_PAYOUT_PER_MM_TRAVEL / spool_radius_mm
+    L = p.line_length_mm(delta_s_mm) / 1000.0
+    return f_hand_n * L * math.sin(math.radians(theta_deg(stroke_mm)))
 
 
-def required_ratio(spool_radius_mm, stroke_mm=None):
-    """Total reduction ratio spool -> one handle (spool turns per handle turn).
+# ------------------------------------------------------------------ carriage force balance
+def pin_force_n(stroke_mm, f_hand_n, delta_s_mm=p.DELTA_S_MM):
+    """Axial force on the carriage from BOTH handles [N], positive = down (closing).
 
-        ratio = theta_spool(full stroke) / theta_handle(full opening)
-    Example r = 12 mm: (300/12) rad / (30 deg = 0.5236 rad) = 25 / 0.5236 = 47.7
+    Virtual work: F_pin * dy = 2 * T * d(beta)  ->  F_pin = 2 T / (dy/dbeta).
+    In the dwell the slot runs parallel to the carriage, so the axial force is zero.
     """
-    if stroke_mm is None:
-        stroke_mm = p.STROKE_MAP_MM
-    handle_rad = math.radians(p.ANGLE_PER_HANDLE_DEG)
-    return spool_rotation_rad(stroke_mm, spool_radius_mm) / handle_rad
+    if stroke_mm > p.STROKE_MAP_MM:      # s = STROKE_MAP is the last point of the drive section
+        return 0.0
+    return 2.0 * hand_torque_nm(stroke_mm, f_hand_n, delta_s_mm) / (p.DY_DBETA_MM_PER_RAD / 1000.0)
 
 
-# ------------------------------------------------------------------ gear train planning
+def spring_force_n(stroke_mm):
+    """Extension-spring force on the carriage [N], always down: preload + rate * carriage travel."""
+    return p.SPRING_PRELOAD_N + p.SPRING_RATE_N_PER_MM * (carriage_y_mm(stroke_mm) - p.Y0_PIN_MM)
+
+
+def friction_force_n(stroke_mm, f_hand_n, delta_s_mm=p.DELTA_S_MM):
+    """Friction on the carriage [N] (ASSUMPTION): (1 - eta) * (spring + |pin|), opposes motion."""
+    return (1.0 - p.ETA_MECH) * (spring_force_n(stroke_mm)
+                                 + abs(pin_force_n(stroke_mm, f_hand_n, delta_s_mm)))
+
+
+def cable_tension_n(stroke_mm, f_hand_n, direction, delta_s_mm=p.DELTA_S_MM):
+    """Reference-cable tension [N] from the carriage force balance.
+
+    Cable parts pull the carriage UP with N_REEVE * T.  Spring and (closing) pin force pull down.
+      down stroke (carriage moving up, friction acts down):  N T = spring + pin + friction
+      up stroke   (carriage moving down, friction acts up):  N T = spring + pin - friction
+    A result <= 0 means the cable is slack: the hand load drives the carriage ahead of the cable.
+    """
+    f = friction_force_n(stroke_mm, f_hand_n, delta_s_mm)
+    if direction == "up":
+        f = -f
+    return (spring_force_n(stroke_mm) + pin_force_n(stroke_mm, f_hand_n, delta_s_mm) + f) / p.N_REEVE
+
+
+def stroke_points():
+    """Stroke values [mm] used in the tables: 0 .. STROKE_DWELL_END in STROKE_TABLE_STEP steps."""
+    n = int(round(p.STROKE_DWELL_END_MM / p.STROKE_TABLE_STEP_MM))
+    return [i * p.STROKE_TABLE_STEP_MM for i in range(n + 1)]
+
+
+def first_slack_stroke_mm(f_hand_n, delta_s_mm=p.DELTA_S_MM):
+    """First stroke [mm] where the cable tension drops below CABLE_TENSION_MIN_N (either direction), or None."""
+    for s in stroke_points():
+        if min(cable_tension_n(s, f_hand_n, "down", delta_s_mm),
+               cable_tension_n(s, f_hand_n, "up", delta_s_mm)) < p.CABLE_TENSION_MIN_N:
+            return s
+    return None
+
+
+def r0_max_n():
+    """No-load actuation resistance R0 [N]: max cable tension on the down stroke with F = 0."""
+    return max(cable_tension_n(s, 0.0, "down") for s in stroke_points())
+
+
+def r_load_max_n(f_hand_n=p.F_HAND_N, delta_s_mm=p.DELTA_S_MM):
+    """Loaded actuation resistance [N]: max cable tension on the down stroke at the design hand load."""
+    return max(cable_tension_n(s, f_hand_n, "down", delta_s_mm) for s in stroke_points())
+
+
+# ------------------------------------------------------------------ slot profile (the cam)
+def rotate(x, y, angle_deg):
+    """Rotate the vector (x, y) counter-clockwise by angle_deg."""
+    c, s = math.cos(math.radians(angle_deg)), math.sin(math.radians(angle_deg))
+    return c * x - s * y, s * x + c * y
+
+
+def slot_point_mm(stroke_mm, delta_s_mm=p.DELTA_S_MM):
+    """Slot centre-line point (x, y) [mm] for the RIGHT arm, in the arm frame (origin = pivot,
+    frame = housing frame at closed). The arm opens by rotating CCW by phi, so the pin, seen from
+    the arm, is the housing-frame pin rotated by -phi:
+        slot = Rot(-phi) . (pin - pivot),   pin - pivot = (-P/2, y_pin)
+    The left arm is the mirror image (x -> -x).
+    """
+    P = p.pivot_spacing_mm(delta_s_mm)
+    return rotate(-P / 2.0, carriage_y_mm(stroke_mm), -handle_rotation_deg(stroke_mm))
+
+
+def slot_profile_mm(step_mm=5.0, delta_s_mm=p.DELTA_S_MM):
+    """List of (stroke, x, y) slot centre-line points for the right arm, 0 .. STROKE_DWELL_END."""
+    pts = []
+    s = 0.0
+    while s <= p.STROKE_DWELL_END_MM + 1e-9:
+        x, y = slot_point_mm(s, delta_s_mm)
+        pts.append((s, x, y))
+        s += step_mm
+    return pts
+
+
+def pressure_angle_deg(stroke_mm, delta_s_mm=p.DELTA_S_MM, ds=0.5):
+    """Pressure angle [deg] = angle between the slot normal and the carriage travel (vertical).
+
+    Computed numerically: the slot tangent (in the arm frame) is d(slot)/ds; rotate it back to the
+    housing frame. The angle of that tangent from HORIZONTAL equals the normal's angle from VERTICAL.
+    In the dwell the tangent is vertical -> 90 deg (no drive, by design).
+    """
+    if stroke_mm + ds > p.STROKE_DWELL_END_MM:   # at the very end, difference backwards
+        stroke_mm -= ds
+    x1, y1 = slot_point_mm(stroke_mm, delta_s_mm)
+    x2, y2 = slot_point_mm(stroke_mm + ds, delta_s_mm)
+    tx, ty = rotate(x2 - x1, y2 - y1, handle_rotation_deg(stroke_mm))
+    return math.degrees(math.atan2(abs(ty), abs(tx)))
+
+
+# ------------------------------------------------------------------ architecture A reference (not selected)
+def required_ratio(spool_radius_mm):
+    """Spool->handle reduction for a spool drive: ratio = k / r_spool (k = 573 mm/rad)."""
+    return p.K_MM_PER_RAD / spool_radius_mm
+
+
 def stages_needed(ratio):
-    """Smallest number of stages n so that (max ratio per stage)^n >= ratio. Minimum 1."""
+    """Smallest n with (max ratio per stage)^n >= ratio."""
     n = 1
     while p.GEAR_MAX_STAGE_RATIO ** n < ratio:
         n += 1
     return n
 
 
-def plan_gear_train(ratio):
-    """Suggest tooth counts [(pinion, gear), ...] for a compound reduction train.
-
-    Method: n stages, every pinion has GEAR_MIN_TEETH. Stages 1..n-1 get ratio^(1/n)
-    (rounded to whole teeth). The LAST stage is sized to make up whatever is left, so the
-    rounding error does not pile up. Returns (stages, achieved_ratio).
-    """
-    n = stages_needed(ratio)
-    z_p = p.GEAR_MIN_TEETH
-    stages = []
-    achieved = 1.0
-    for _ in range(n - 1):
-        z_g = round(z_p * ratio ** (1.0 / n))
-        stages.append((z_p, z_g))
-        achieved *= z_g / z_p
-    z_g_last = round(z_p * ratio / achieved)
-    stages.append((z_p, z_g_last))
-    achieved *= z_g_last / z_p
-    return stages, achieved
-
-
-def stage_centre_distance_mm(z_pinion, z_gear):
-    """Centre distance of a spur pair [mm] = module * (z1 + z2) / 2."""
-    return p.GEAR_MODULE_MM * (z_pinion + z_gear) / 2.0
-
-
-def largest_gear_diameter_mm(stages):
-    """Largest pitch diameter [mm] in the train = module * teeth."""
-    return p.GEAR_MODULE_MM * max(z_g for _, z_g in stages)
-
-
-# ------------------------------------------------------------------ checks
-def grip_centre_separation_mm(included_deg):
-    """Distance between the two grip centres [mm].
-
-    Each grip centre sits GRIP_CENTRE_FROM_PIVOT_MM from its pivot, each handle at half the
-    included angle from the centre line (handles symmetric). Pivots are PIVOT_SPACING apart:
-        separation = pivot_spacing + 2 * L * sin(included / 2)
-    """
-    half = math.radians(included_deg / 2.0)
-    return p.HANDLE_PIVOT_SPACING_MM + 2.0 * p.GRIP_CENTRE_FROM_PIVOT_MM * math.sin(half)
-
-
-def check_hand_spacing():
-    """Return (passed, separation_mm) at the closed angle."""
-    sep = grip_centre_separation_mm(p.ANGLE_INCLUDED_CLOSED_DEG)
-    return sep >= p.HAND_SPACING_MIN_MM, sep
-
-
-def housing_width_proxy_mm(spool_radius_mm, stages):
-    """PROXY for housing width [mm] (no layout yet): widest round part + 2 walls + 2 clearances."""
-    widest = max(2.0 * spool_radius_mm, largest_gear_diameter_mm(stages))
-    return widest + 2.0 * p.MIN_WALL_MM + 2.0 * p.MOVING_CLEARANCE_MM
-
-
-def check_angle_range():
-    """Return (passed, details): 0 travel -> closed angle, full map -> open angle,
-    beyond the map -> still the open angle (hard stop)."""
-    a0 = included_angle_deg(0.0)
-    a1 = included_angle_deg(p.STROKE_MAP_MM)
-    a2 = included_angle_deg(p.STROKE_MAP_MM * p.STROKE_BEYOND_MAP_PERCENT / 100.0)
-    ok = (abs(a0 - p.ANGLE_INCLUDED_CLOSED_DEG) < 1e-9
-          and abs(a1 - p.ANGLE_INCLUDED_OPEN_DEG) < 1e-9
-          and abs(a2 - p.ANGLE_INCLUDED_OPEN_DEG) < 1e-9)
-    return ok, (a0, a1, a2)
-
-
+# ------------------------------------------------------------------ report helpers
 def tag(ok):
     """PASS / FAIL text."""
     return "PASS" if ok else "FAIL"
 
 
-# ------------------------------------------------------------------ command-line report
+def print_geometry():
+    """Table: bell-crank geometry for each DELTA_S in the study."""
+    print("1) Bell-crank geometry (S_closed = %.0f mm, theta %.0f -> %.0f deg, F_hand = %.0f N)"
+          % (p.S_CLOSED_MM, p.THETA_CLOSED_DEG, p.THETA_OPEN_DEG, p.F_HAND_N))
+    print("   dS mm | L_line | pivot P | S open | width | T closed | T open (per handle, N m)")
+    for dS in p.DELTA_S_STUDY_MM:
+        print("   %5.0f | %6.1f | %7.1f | %6.1f | %5.1f | %+8.2f | %+6.2f"
+              % (dS, p.line_length_mm(dS), p.pivot_spacing_mm(dS), grip_separation_mm(p.STROKE_MAP_MM, dS),
+                 p.housing_width_mm(dS), hand_torque_nm(0.0, p.F_HAND_N, dS),
+                 hand_torque_nm(p.STROKE_MAP_MM - 1e-6, p.F_HAND_N, dS)))
+
+
+def print_angle_table():
+    """Table: angle, theta, carriage position vs travel."""
+    print("\n2) Angle vs travel (map %.0f mm, dwell to %.0f mm, N_reeve = %d)"
+          % (p.STROKE_MAP_MM, p.STROKE_DWELL_END_MM, p.N_REEVE))
+    print("   s mm | included | per handle | theta | carriage y | separation")
+    for s in stroke_points()[::3]:
+        print("   %4.0f | %8.1f | %10.1f | %5.1f | %10.1f | %10.1f"
+              % (s, included_angle_deg(s), handle_rotation_deg(s), theta_deg(s),
+                 carriage_y_mm(s), grip_separation_mm(s)))
+
+
+def print_force_balance():
+    """Table: carriage force balance and cable tension for the study grid."""
+    print("\n3) Carriage force balance, cable tension [N] (eta = %.2f, spring %.0f N + %.2f N/mm)"
+          % (p.ETA_MECH, p.SPRING_PRELOAD_N, p.SPRING_RATE_N_PER_MM))
+    print("   pin force: + = down (closing).  T_down / T_up = cable tension on down / up stroke.")
+    for dS in p.DELTA_S_STUDY_MM:
+        for F in p.F_HAND_STUDY_N:
+            slack = first_slack_stroke_mm(F, dS)
+            print("   dS = %.0f mm, F_hand = %3.0f N  ->  first slack at: %s"
+                  % (dS, F, ("%.0f mm" % slack) if slack is not None else "never"))
+            print("      s mm | T_hand | pin | spring | fric | T_down | T_up")
+            for s in stroke_points()[::2]:
+                print("      %4.0f | %+6.2f | %+5.0f | %6.1f | %4.1f | %6.1f | %5.1f"
+                      % (s, hand_torque_nm(s, F, dS), pin_force_n(s, F, dS), spring_force_n(s),
+                         friction_force_n(s, F, dS), cable_tension_n(s, F, "down", dS),
+                         cable_tension_n(s, F, "up", dS)))
+
+
+def print_slot():
+    """Table: slot centre-line points and pressure angle for the baseline DELTA_S."""
+    print("\n4) Slot centre line, right arm, arm frame (origin = pivot), dS = %.0f mm, slot width %.1f mm"
+          % (p.DELTA_S_MM, p.SLOT_WIDTH_MM))
+    print("   s mm |    x    |    y    | r from pivot | pressure angle")
+    for s, x, y in slot_profile_mm(step_mm=25.0):
+        print("   %4.0f | %7.1f | %7.1f | %12.1f | %6.1f%s"
+              % (s, x, y, math.hypot(x, y), pressure_angle_deg(s),
+                 "  (dwell)" if s >= p.STROKE_MAP_MM else ""))
+
+
+def print_checks():
+    """PASS/FAIL checks."""
+    print("\n5) Checks")
+    s_closed = grip_separation_mm(0.0)
+    print("   Hand spacing closed = %.1f mm, need >= %.1f -> %s"
+          % (s_closed, p.HAND_SPACING_MIN_MM, tag(s_closed >= p.HAND_SPACING_MIN_MM - 1e-6)))
+    slack_any = [F for F in p.F_HAND_STUDY_N if first_slack_stroke_mm(F) is not None]
+    print("   Cable never slack (T >= %.0f N) for F_hand in %s, dS = %.0f -> %s%s"
+          % (p.CABLE_TENSION_MIN_N, p.F_HAND_STUDY_N, p.DELTA_S_MM, tag(not slack_any),
+             ("  (slack at F = %s)" % slack_any) if slack_any else ""))
+    r0 = r0_max_n()
+    print("   R0 (no load) max = %.1f N, goal <= %.0f -> %s" % (r0, p.R0_MAX_N, tag(r0 <= p.R0_MAX_N)))
+    rl = r_load_max_n()
+    lim = p.R_LOAD_FRACTION_MAX * p.STACK_LOAD_N
+    print("   R_load max = %.1f N at F_hand = %.0f N, goal <= %.0f%% of %.0f N stack = %.0f N -> %s (TODO confirm goal)"
+          % (rl, p.F_HAND_N, 100 * p.R_LOAD_FRACTION_MAX, p.STACK_LOAD_N, lim, tag(rl <= lim)))
+    w = p.HOUSING_WIDTH_MM
+    print("   Housing width proxy = %.1f mm, target <= %.0f -> %s" % (w, p.HOUSING_WIDTH_MAX_MM, tag(w <= p.HOUSING_WIDTH_MAX_MM)))
+    pa = max(pressure_angle_deg(s) for s in stroke_points() if s < p.STROKE_MAP_MM)
+    print("   Pressure angle max (drive section) = %.1f deg, limit %.0f -> %s"
+          % (pa, p.PRESSURE_ANGLE_MAX_DEG, tag(pa <= p.PRESSURE_ANGLE_MAX_DEG)))
+    a0, a1, a2 = included_angle_deg(0), included_angle_deg(p.STROKE_MAP_MM), included_angle_deg(p.STROKE_DWELL_END_MM)
+    ok = abs(a0 - p.ANGLE_INCLUDED_CLOSED_DEG) < 1e-9 and abs(a1 - p.ANGLE_INCLUDED_OPEN_DEG) < 1e-9 and abs(a2 - a1) < 1e-9
+    print("   Handle angle range: %.0f / %.0f / %.0f deg at 0 / %.0f / %.0f mm -> %s"
+          % (a0, a1, a2, p.STROKE_MAP_MM, p.STROKE_DWELL_END_MM, tag(ok)))
+
+
+def print_arch_a_reference():
+    """Short reference table for the spool + gear-train architecture (not selected)."""
+    print("\n6) Reference only - architecture A (spool + gears, not selected): ratio = %.0f / r" % p.K_MM_PER_RAD)
+    for r in p.spool_radius_candidates():
+        print("   r = %2.0f mm: ratio %.1f, %d stages at max %.0f:1 per stage"
+              % (r, required_ratio(r), stages_needed(required_ratio(r)), p.GEAR_MAX_STAGE_RATIO))
+
+
 def main():
     """Print all tables and checks."""
-    print("autoRAD kinematics - PRELIMINARY, not a validation\n")
-
-    print("1) Handle angle vs attachment travel (map stroke = %.0f mm)" % p.STROKE_MAP_MM)
-    print("   % stroke | travel mm | included deg | per-handle deg")
-    for pct in p.STROKE_CHECK_PERCENTS + (p.STROKE_BEYOND_MAP_PERCENT,):
-        s = p.STROKE_MAP_MM * pct / 100.0
-        print("   %8d | %9.1f | %12.1f | %14.1f" % (pct, s, included_angle_deg(s), handle_rotation_deg(s)))
-
-    print("\n2) Spool, ratio, gear train per candidate spool radius")
-    print("   r mm | spool rev | ratio | stages | teeth (pinion/gear per stage)  | achieved | err %  | widest part+walls mm | width")
-    rows = []
-    for r in p.spool_radius_candidates():
-        rev = spool_rotation_rad(p.STROKE_MAP_MM, r) / (2 * math.pi)
-        ratio = required_ratio(r)
-        stages, got = plan_gear_train(ratio)
-        w = housing_width_proxy_mm(r, stages)
-        teeth = " ".join("%d/%d" % s for s in stages)
-        err = 100.0 * (got - ratio) / ratio
-        wtxt = tag(w <= p.HOUSING_WIDTH_MAX_MM)
-        print("   %4.0f | %9.2f | %5.1f | %6d | %-30s | %8.2f | %+5.1f | %20.1f | %s"
-              % (r, rev, ratio, len(stages), teeth, got, err, w, wtxt))
-        rows.append((r, w))
-    print("   (module = %.2f mm, min pinion = %d teeth, max stage ratio = %.1f; all TODO placeholders)"
-          % (p.GEAR_MODULE_MM, p.GEAR_MIN_TEETH, p.GEAR_MAX_STAGE_RATIO))
-
-    print("\n3) Ratio sensitivity to the mapping stroke (design range)")
-    print("   r mm | " + " | ".join("%4.0f mm" % s for s in
-          (p.STROKE_RANGE_MIN_MM, p.STROKE_MAP_MM, p.STROKE_RANGE_MAX_MM)))
-    for r in p.spool_radius_candidates():
-        vals = [required_ratio(r, s) for s in (p.STROKE_RANGE_MIN_MM, p.STROKE_MAP_MM, p.STROKE_RANGE_MAX_MM)]
-        print("   %4.0f | " % r + " | ".join("%7.1f" % v for v in vals))
-
-    print("\n4) Checks")
-    ok, sep = check_hand_spacing()
-    print("   Hand spacing: grip-centre separation closed = %.1f mm, need >= %.1f mm -> %s"
-          % (sep, p.HAND_SPACING_MIN_MM, tag(ok)))
-    print("     (assumes pivot spacing = %.1f mm, TODO)" % p.HANDLE_PIVOT_SPACING_MM)
-    ok, (a0, a1, a2) = check_angle_range()
-    print("   Handle angle range: 0 mm -> %.1f, %.0f mm -> %.1f, %d%% -> %.1f deg -> %s"
-          % (a0, p.STROKE_MAP_MM, a1, p.STROKE_BEYOND_MAP_PERCENT, a2, tag(ok)))
-    n_ok = sum(1 for _, w in rows if w <= p.HOUSING_WIDTH_MAX_MM)
-    print("   Housing width (PROXY, limit %.0f mm): %d of %d radii pass -> see column above"
-          % (p.HOUSING_WIDTH_MAX_MM, n_ok, len(rows)))
-    print("   Actuation resistance <= %.0f N: TODO (definition TBD)" % p.ACTUATION_RESISTANCE_MAX_N)
+    print("autoRAD kinematics (architecture E) - PRELIMINARY, not a validation\n")
+    print_geometry()
+    print_angle_table()
+    print_force_balance()
+    print_slot()
+    print_checks()
+    print_arch_a_reference()
 
 
 if __name__ == "__main__":
