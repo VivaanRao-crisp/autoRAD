@@ -18,3 +18,4 @@
 | 2026-11-10 | kinematics_D.py + docs/kinematics_D_report.md + docs/img/D_*.png; D geometry corrected in params.py (arm 70.3, link 70, 25 deg); iteration_log.md started per CLAUDE.md | verify D before CAD (CLAUDE.md rule 5) |
 | 2026-11-10 | check3d_D.py + report addendum (3D stack, grips vs housing, reeving lanes); params.py header/legacy/bearing/stack/lane values | review of kinematics_D_report.md items 1-3 |
 | 2026-11-10 | docs/design_freeze.md (NOT FROZEN), CLAUDE.md and params.py updated; check3d_D.py: lanes with F0, force directions, y-layout, width budget | freeze run | 
+| 2026-11-10 | docs/cad_build_guide.md; params.py D_ARM 72.05, psi0 38, PULLEY_WIDTH 7; CLAUDE.md CAD route | team builds CAD in GUI tool |

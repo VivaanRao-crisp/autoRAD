@@ -98,10 +98,10 @@ STACK_LOAD_N = 2 * F_HAND_N         # [N] stack load implied by the hand-load as
 #   inward horizontal at closed; link of length D_LINK_MM from the arm joint UP to the carriage pin on the
 #   centre line. Opening = CCW rotation of the right handle -> the inward joint moves DOWN -> the carriage
 #   moves DOWN as the cable pays out (fixed pulleys below the carriage, return spring pulls it up).
-D_ARM_MM = 72.75                     # [mm] VERIFIED kinematics_D.py (freeze run): re-solved for 37.5 mm travel at 40 deg elevation
+D_ARM_MM = 72.05                     # [mm] VERIFIED kinematics_D.py (freeze run): re-solved for 37.5 mm travel at 40 deg elevation
                                     #      (history: 70.0 start -> 70.3 at 25 deg -> 72.7 at 40 deg)
 D_LINK_MM = 70.0                    # [mm] VERIFIED kinematics_D.py scan (reviewer: keep 70)
-D_ARM_ANGLE_CLOSED_DEG = 40.0       # [deg] reviewer decision (freeze run): joint y at open +12.6.
+D_ARM_ANGLE_CLOSED_DEG = 38.0       # [deg] reviewer decision (freeze run): joint y at open +12.6.
                                     #      VERIFIED kinematics_D.py: mapping error +1.72 deg = 2.86 % > 2.5 % STOP CONDITION.
                                     #      Proposed 38.0 (a = 72.05): 2.39 %, joint +10.0 - see docs/design_freeze.md
 D_N_REEVE = 8                       # [-] VERIFIED kinematics_D.py: carriage travel = s / 8
@@ -120,7 +120,7 @@ D_CARRIAGE_TRAVEL_MM = 37.5         # [mm] VERIFIED kinematics_D.py (freeze run)
 PULLEY_BEARING_OD_MM = 16.0         # [mm] ASSUMPTION default 625ZZ
 PULLEY_BEARING_ID_MM = 5.0          # [mm] ASSUMPTION default 625ZZ
 PULLEY_BEARING_WIDTH_MM = 5.0       # [mm] ASSUMPTION default 625ZZ
-PULLEY_WIDTH_MM = 8.0               # [mm] ASSUMPTION: bearing width + 2 x 1.5 mm flanges
+PULLEY_WIDTH_MM = 7.0               # [mm] ASSUMPTION (user default, freeze run): bearing width 5 + 2 x 1 mm flanges
 
 # -- pins, bosses, plates (check3d_D.py)
 D_JOINT_PIN_MM = 5.0                # [mm] ASSUMPTION: M5 arm/link joint pin (link force <= 119 N, kinematics_D.py)

@@ -19,7 +19,7 @@ and `docs/design_freeze.md` — **status NOT FROZEN**, see design_freeze.md §1 
   net 8 T down. (The earlier "4 pulleys on one axle = 150 mm" and "2 × 2 in plane" are void.)
 - Carriage block 98 mm wide, moves **DOWN** on cable payout; two Ø5 guide rods at x = ±57, z 43;
   return extension spring **above** the carriage at x 0, z 43 (30 N preload, ~0.1 N/mm as bought; TBD).
-- Bell-crank drive arms a = 72.75 mm (ψ0 = 40°; 72.05 at 38° proposed) pointing inward, links
+- Bell-crank drive arms a = 72.05 mm (ψ0 = 38°, applied 2026-11-10; 72.75 at 40° failed the 2.5 % mapping limit) pointing inward, links
   70 mm to the carriage pin on the centre line. Carriage travel 37.5 mm for 30°. Hard stop at 110°.
 - **z-stack (CAD Y axis = pivot axis direction here):** arm R 0–8, link R 8.3–14.3, link L 14.6–20.6,
   arm L 20.9–28.9; both long handle arms at the common plane z = 14.45 via 10.45 mm hub extensions.
@@ -50,7 +50,11 @@ and `docs/design_freeze.md` — **status NOT FROZEN**, see design_freeze.md §1 
 
 ## CAD stack and layout
 
-Use **build123d** (fall back to CadQuery). One script per part so a single part can be reprinted.
+**CHANGED 2026-11-10:** the instructor does not accept Python/script CAD. The six-person team builds the
+parametric model in the institute GUI CAD tool (tool name: TODO). Claude does NOT write CAD scripts;
+it maintains `docs/cad_build_guide.md` (parameter table, per-part sheets, mate sheet, work split,
+acceptance values) and the analysis scripts `kinematics*.py` / `check3d_D.py`, which supply the
+numbers. The layout below is the original script-based plan and is superseded.
 
 ```
 cad/params.py            # shared parameters
