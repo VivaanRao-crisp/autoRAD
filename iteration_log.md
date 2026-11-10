@@ -1,0 +1,11 @@
+# Iteration log (CLAUDE.md rule 4)
+
+Earlier changes (design-study revisions 1–3) are in `CHANGELOG.md`. From here on, every design
+change goes in this file: date, what changed, why, which part to reprint.
+
+| date | what changed | why | reprint |
+|---|---|---|---|
+| 2026-11-10 | Architecture D kinematics verified before CAD (`kinematics_D.py`, `docs/kinematics_D_report.md`, plots in `docs/img/`). Arm 70.0 → **70.3 mm**, link 60 → **70 mm**, arm elevation at closed 0 → **25°**; carriage moves **down** on payout (fixed pulleys below the carriage); carriage pulleys 2 rows of 2 (70 mm), not 4 in a row (150 mm > 149 mm housing). | Start values gave 32.4 mm of carriage travel (stop at 259 mm, not 300) and a 13.6 % non-linear mapping; joint direction in buildability.md was a sign error. | nothing printed yet |
+| 2026-11-10 | 3D stack re-ordered to arm R / link R / link L / arm L (`D_STACK`); grips brought to a common plane z = 14.45 by 10.45 mm hub extensions; reeving changed to crossed axles (moving pulleys axle along x, fixed along z), carriage block 98 mm, cable depth z 21-59; params: bearing 625ZZ defaults, pins/bosses, lanes, E marked legacy | reported stack put joint pins through the far arm (-9.6 mm); 2x2 in-plane reeving forms a closed loop; see docs/kinematics_D_report.md addendum | nothing printed yet |
+| 2026-11-10 | OPEN: hand envelope (R35 assumption) overlaps the pivot hub by 12.9 mm; arm joint below the pivot line at full open. Proposals P1-P3 in the report; verified geometry unchanged pending review | check3d_D.py grip check | - |
+| 2026-11-10 | Freeze run: arm elevation 25 -> 40 deg, arm 70.3 -> 72.75 (re-solved), hub R20 -> R10, cable z centre 43, fairlead pulley F0 + dead end at the fixed end, spring above the carriage, rods at x +/-57. NOT FROZEN: mapping 2.86 % > 2.5 %, spring-beside does not fit (moved above), depth 72 > 70. Fixes proposed in docs/design_freeze.md | reviewer instructions + stop conditions | nothing printed yet |
