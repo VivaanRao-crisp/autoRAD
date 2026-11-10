@@ -19,3 +19,4 @@
 | 2026-11-10 | check3d_D.py + report addendum (3D stack, grips vs housing, reeving lanes); params.py header/legacy/bearing/stack/lane values | review of kinematics_D_report.md items 1-3 |
 | 2026-11-10 | docs/design_freeze.md (NOT FROZEN), CLAUDE.md and params.py updated; check3d_D.py: lanes with F0, force directions, y-layout, width budget | freeze run | 
 | 2026-11-10 | docs/cad_build_guide.md; params.py D_ARM 72.05, psi0 38, PULLEY_WIDTH 7; CLAUDE.md CAD route | team builds CAD in GUI tool |
+| 2026-11-10 | bench_check.py, docs/design_spec.md, docs/buy_list.md, docs/demo_sheet.md, docs/img/board_template_1to1.pdf; params.py D_* set to the bench rig + BENCH_* block; CLAUDE.md final section | final bench-rig freeze; Claude work complete |

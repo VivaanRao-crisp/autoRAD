@@ -8,7 +8,21 @@ electronics, no manual adjustment. Driven only by the attachment's travel relati
 Read first: `docs/main_design.md` (rev 3) and `docs/buildability.md`. Both are first-pass studies;
 **nothing is validated.** `kinematics.py` and `params.py` already exist in the repo — reuse them.
 
-## What we are building (decision made)
+## FINAL (2026-11-10 evening): BENCH RIG — see `docs/design_spec.md`, `docs/buy_list.md`, `docs/demo_sheet.md`
+
+The prototype is a proof-of-concept **bench rig of the Main concept on one 200 × 290 board**:
+4-part reeved cord (3 × 625 bearings as pulleys, behind the board), carriage plate behind the board
+on two bolts through two slots, two links and two one-piece bell-crank handles in front, rubber-band
+return. Arm 125.9 mm at 42°, link 120 mm, carriage travel 75 mm, 50° → 110° over 300 mm of cord
+payout (mapping within 1.7 %). 5 printed models / 16 pieces (~9 h), ~18 bought items. No housing,
+no anchor spring, no gears, not machine-mountable. Checks: `python3 bench_check.py --template`
+(also writes the 1:1 board template to `docs/img/board_template_1to1.pdf`). Claude's work is done;
+the team rebuilds the parts in Fusion/Inventor from design_spec.md, prints, assembles, tests
+(demo_sheet.md), and documents v1 → problems → v2.
+
+The section below is the earlier full-attachment plan and is superseded (kept for history).
+
+## What we were building before the bench-rig decision (superseded)
 
 **Option D + anchor spring** (see `buildability.md` §1–3, verified in `docs/kinematics_D_report.md`
 and `docs/design_freeze.md` — **status NOT FROZEN**, see design_freeze.md §1 for the open stop conditions):

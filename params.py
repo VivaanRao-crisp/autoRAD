@@ -74,9 +74,9 @@ ETA_PULLEY = 0.97                   # [-] ASSUMPTION: efficiency per ball-bearin
 ETA_SLIDE = 0.90                    # [-] ASSUMPTION: carriage guide + roller-in-slot, together
 
 # ---------------------------------------------------------------- return spring (extension)
-SPRING_PRELOAD_N = 30.0             # [N] spring force on the carriage at the closed stop (rev 3: 20 N gave 1.8 N
-                                    #     cable tension on the no-load up stroke with N_REEVE = 8, below the 2 N margin)
-SPRING_RATE_N_PER_MM = 0.10         # [N/mm] TODO: pick from a catalogue, no part number assumed
+SPRING_PRELOAD_N = 12.0             # [N] bench rig: rubber band / bungee pull on the carriage at closed. ASSUMPTION, pick by test
+                                    #     (history: 30 N extension spring for the 8-part full attachment)
+SPRING_RATE_N_PER_MM = 0.05         # [N/mm] ASSUMPTION: soft band; +3.75 N over the 75 mm travel
 CABLE_TENSION_MIN_N = 2.0           # [N] "never slack" margin used in the PASS/FAIL check
 
 # ---------------------------------------------------------------- LEGACY architecture E: slot / roller
@@ -98,13 +98,11 @@ STACK_LOAD_N = 2 * F_HAND_N         # [N] stack load implied by the hand-load as
 #   inward horizontal at closed; link of length D_LINK_MM from the arm joint UP to the carriage pin on the
 #   centre line. Opening = CCW rotation of the right handle -> the inward joint moves DOWN -> the carriage
 #   moves DOWN as the cable pays out (fixed pulleys below the carriage, return spring pulls it up).
-D_ARM_MM = 72.05                     # [mm] VERIFIED kinematics_D.py (freeze run): re-solved for 37.5 mm travel at 40 deg elevation
+D_ARM_MM = 125.9                    # [mm] VERIFIED bench_check.py: re-solved for 75.0 mm carriage travel (n = 4), 42 deg elevation
                                     #      (history: 70.0 start -> 70.3 at 25 deg -> 72.7 at 40 deg)
-D_LINK_MM = 70.0                    # [mm] VERIFIED kinematics_D.py scan (reviewer: keep 70)
-D_ARM_ANGLE_CLOSED_DEG = 38.0       # [deg] reviewer decision (freeze run): joint y at open +12.6.
-                                    #      VERIFIED kinematics_D.py: mapping error +1.72 deg = 2.86 % > 2.5 % STOP CONDITION.
-                                    #      Proposed 38.0 (a = 72.05): 2.39 %, joint +10.0 - see docs/design_freeze.md
-D_N_REEVE = 8                       # [-] VERIFIED kinematics_D.py: carriage travel = s / 8
+D_LINK_MM = 120.0                   # [mm] VERIFIED bench_check.py scan (n = 4): mapping error 1.7 %, transmission angle >= 64 deg
+D_ARM_ANGLE_CLOSED_DEG = 42.0       # [deg] VERIFIED bench_check.py scan: 8.5 mm between the arm body and the opposite pivot bolt at open
+D_N_REEVE = 4                       # [-] bench rig: 4 cable parts, 2 moving + 1 fixed bearing + fairlead bearing
 D_CARRIAGE_PULLEYS_PER_ROW = 2      # [-] ASSUMPTION: 2 rows of 2 (4 in a row = 150 mm > 149 mm housing, buildability error)
 D_ARM_WIDTH_MM = 16.0               # [mm] ASSUMPTION: drive-arm plate width, used for interference margins
 D_ARM_THICK_MM = 8.0                # [mm] ASSUMPTION: plate thickness; arms stacked in z with 0.3 mm gap
@@ -114,7 +112,7 @@ D_PIVOT_BOLT_MM = 8.0               # [mm] M8 pivot bolt (allowed by reviewer)
 D_ANCHOR_SPRING_PRELOAD_N = 50.0    # [N] v2 only (CLAUDE.md). ASSUMPTION: must exceed R_load. Rate: TODO
 D_ANCHOR_TENSION_STUDY_N = (50.0, 70.0)   # [N] cable tensions at which the carriage stop load is reported
 D_TRANSMISSION_ANGLE_MIN_DEG = 30.0 # [deg] flag limit requested by the reviewer
-D_CARRIAGE_TRAVEL_MM = 37.5         # [mm] VERIFIED kinematics_D.py (freeze run): carriage travel at 30 deg
+D_CARRIAGE_TRAVEL_MM = 75.0         # [mm] VERIFIED bench_check.py: 300 / 4
 
 # -- bought bearing (CLAUDE.md: parameter, default 625ZZ; confirm with the user before printing pulleys)
 PULLEY_BEARING_OD_MM = 16.0         # [mm] ASSUMPTION default 625ZZ
@@ -123,19 +121,19 @@ PULLEY_BEARING_WIDTH_MM = 5.0       # [mm] ASSUMPTION default 625ZZ
 PULLEY_WIDTH_MM = 7.0               # [mm] ASSUMPTION (user default, freeze run): bearing width 5 + 2 x 1 mm flanges
 
 # -- pins, bosses, plates (check3d_D.py)
-D_JOINT_PIN_MM = 5.0                # [mm] ASSUMPTION: M5 arm/link joint pin (link force <= 119 N, kinematics_D.py)
-D_CARRIAGE_PIN_MM = 8.0             # [mm] ASSUMPTION: M8 carriage pin (227 N, kinematics_D.py)
-D_HUB_RADIUS_MM = PULLEY_BEARING_OD_MM / 2 + 2.0   # [mm] ASSUMPTION: smallest pivot hub = bearing + 2 mm wall = R10
+D_JOINT_PIN_MM = 5.0                # [mm] M5 arm/link joint pin
+D_CARRIAGE_PIN_MM = 5.0             # [mm] bench rig: M5 carriage pin (also the front guide bolt through board slot 1)
+D_HUB_RADIUS_MM = 12.0              # [mm] bench rig: plain bore on the M8 pivot bolt, no bearing (wall 7.85 mm)
 D_JOINT_BOSS_RADIUS_MM = 8.0        # [mm] ASSUMPTION: boss around the joint pin on arm and link (= arm half width)
 D_PIN_OVERHANG_MM = 3.0             # [mm] ASSUMPTION: pin head / nut beyond the plates it connects
 D_LINK_THICK_MM = 6.0               # [mm] ASSUMPTION: link plate thickness
 D_PLATE_GAP_MM = 0.3                # [mm] clearance between stacked moving plates (brief)
 D_CLEARANCE_MIN_MM = 2.0            # [mm] ASSUMPTION: flag any 3D clearance below this
-D_CHECK_TRAVELS_MM = (0.0, 10.0, 20.0, 30.0, D_CARRIAGE_TRAVEL_MM)   # [mm] carriage positions checked
+D_CHECK_TRAVELS_MM = (0.0, 18.75, 37.5, 56.25, 75.0)   # [mm] carriage positions checked (0..75 mm)
 
 # -- z-stack (z lo, hi) [mm], VERIFIED check3d_D.py (see docs/kinematics_D_report.md section 9)
 D_STACK_REPORTED = {"arm_R": (0.0, 8.0), "arm_L": (8.3, 16.3), "link_R": (16.6, 22.6), "link_L": (22.9, 28.9)}  # rev 1 report, FAILS
-D_STACK = {"arm_R": (0.0, 8.0), "link_R": (8.3, 14.3), "link_L": (14.6, 20.6), "arm_L": (20.9, 28.9)}           # re-stacked
+D_STACK = {"arm_R": (0.0, 8.0), "link_R": (8.3, 14.3), "link_L": (14.6, 20.6), "arm_L": (20.9, 28.9)}           # VERIFIED (bench: board face = z 0)
 D_GRIP_PLANE_Z_MM = 14.45           # [mm] VERIFIED check3d_D.py: common plane of both long arms = centre of the stack
 D_GRIP_SPACER_R_MM = 10.45          # [mm] VERIFIED check3d_D.py: hub extension from arm R plate centre (z 4.0) to the grip plane
 D_GRIP_SPACER_L_MM = 10.45          # [mm] VERIFIED check3d_D.py: hub extension from arm L plate centre (z 24.9) to the grip plane
@@ -149,7 +147,7 @@ D_HOUSING_BOTTOM_Y_MM = 15.0        # [mm] ASSUMPTION/PROPOSAL: housing bottom p
 D_MOVING_AXLE_ABOVE_PIN_MM = 40.0   # [mm] ASSUMPTION: carriage pulley axle above the carriage pin
 D_PULLEY_GAP_AT_STOP_MM = 5.0       # [mm] reviewer: min gap between moving and fixed pulley bodies at the stop
 D_FAIRLEAD_PULLEY_DIAMETER_MM = 20.0   # [mm] ASSUMPTION: F0 turns the anchor cable at the fixed end; bearing with OD <= 12: TODO
-D_CARRIAGE_PIN_BACK_OVERHANG_MM = 1.0  # [mm] ASSUMPTION: carriage pin ends 1 mm behind link L (recessed nut / circlip); pin held from the front
+D_CARRIAGE_PIN_BACK_OVERHANG_MM = 4.0  # [mm] bench rig: M5 nut in front of link L
 D_HOUSING_PLATE_MM = 10.0           # [mm] CLAUDE.md: top/bottom plates >= 10 mm, printed flat
 D_GUIDE_ROD_MM = 5.0                # [mm] CLAUDE.md: two dia-5 guide rods
 D_ROD_BUSH_OD_MM = 12.0             # [mm] ASSUMPTION: printed bush around each rod on the carriage
@@ -167,6 +165,29 @@ D_CABLE_Z_CENTRE_MM = 43.0          # [mm] ASSUMPTION: z of the moving-pulley ax
 D_CARRIAGE_WIDTH_MM = 3 * D_FIXED_PULLEY_DIAMETER_MM + PULLEY_WIDTH_MM   # [mm] VERIFIED check3d_D.py = 98 for dia 30.
                                     # Reviewer asked for 70 (from the 2 x 2 in-plane idea); that layout cannot be
                                     # reeved (closed loop) - see report section 11. 68 mm is reachable with dia-20 fixed pulleys.
+
+# ---------------------------------------------------------------- BENCH RIG (final prototype, 2026-11-10) - everything on one board
+# Board in the XY plane, front face z = 0 (handles and links in front, z > 0), board body z -BOARD_T..0,
+# carriage plate and the whole cord system BEHIND the board (z < -BOARD_T). Pivot line y = 0, centre line x = 0.
+BOARD_W_MM = 200.0                  # [mm] ASSUMPTION: plywood or acrylic, fits an A4 1:1 template
+BOARD_H_MM = 290.0                  # [mm] ASSUMPTION
+BOARD_T_MM = 12.0                   # [mm] ASSUMPTION: 12 mm plywood (10 mm acrylic also fine)
+BOARD_BOTTOM_Y_MM = -20.0           # [mm] bottom edge relative to the pivot line (hub R12 + 8 margin)
+BENCH_PULLEY_D_MM = 16.0            # [mm] 625ZZ bearing used directly as the pulley (OD 16, width 5)
+BENCH_PULLEY_W_MM = 5.0             # [mm]
+BENCH_FLANGE_D_MM = 20.0            # [mm] printed flange washers either side of each bearing, 1 mm thick
+BENCH_CORD_D_MM = 1.5               # [mm] ASSUMPTION: braided cord / fishing line (low load)
+BENCH_AXLE_ABOVE_PIN_MM = 45.0      # [mm] ASSUMPTION: moving-bearing axle above the carriage pin (post hangs from the plate)
+BENCH_MOVING_X_MM = (-22.0, -6.0)   # [mm] x of the two moving bearings (one lane pattern, all parts vertical)
+BENCH_LANE_GAP_AT_STOP_MM = 8.0     # [mm] ASSUMPTION: min gap moving-bearing bottom to fixed-bearing top at the stop
+BENCH_CARRIAGE_T_MM = 8.0           # [mm] carriage plate thickness
+BENCH_GUIDE2_ABOVE_PIN_MM = 60.0    # [mm] second guide bolt above the carriage pin (through board slot 2)
+BENCH_SLOT_W_MM = 5.3               # [mm] board slots for the two M5 guide bolts (5 + 0.3)
+BENCH_DEAD_END_Y_MM = 95.0          # [mm] dead-end screw height (below the carriage's lowest point)
+BENCH_GRIP_D_MM = 20.0              # [mm] ASSUMPTION: wooden dowel, screwed to the grip pad (brief says 32: bench only)
+BENCH_GRIP_LEN_MM = 130.0           # [mm]
+BENCH_RETURN = "rubber band / bungee from the carriage plate to a screw at the top edge"   # ASSUMPTION, no spring spec
+BENCH_ETA = 0.90 * 0.97 ** 3        # [-] ASSUMPTION: 3 bearings; same model as A3
 
 # ---------------------------------------------------------------- architecture A reference (NOT selected)
 # Kept so kinematics.py can still print the spool/gear comparison from the design study.

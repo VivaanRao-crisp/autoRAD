@@ -1,4 +1,10 @@
-# autoRAD - parametric CAD-by-script (architecture E: reeved cable + carriage + slotted bell-crank handles)
+# autoRAD - Main concept (secondary reference cable) - bench-rig prototype
+
+**Start here:** `docs/design_spec.md` (what to build), `docs/buy_list.md`, `docs/demo_sheet.md`,
+`docs/img/board_template_1to1.pdf`. Checks: `python3 bench_check.py --template`. History: `iteration_log.md`, `CHANGELOG.md`.
+
+---
+*Older material below (design study of architectures A-E and the full-attachment option D) is kept for the report.*
 
 All values are PRELIMINARY. Nothing here is validated; only prototype tests can do that.
 Design reasoning: `docs/main_design.md` (rev 2).
