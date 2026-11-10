@@ -1,0 +1,8 @@
+RULES
+- No hard-coded dimensions outside params.py. Use named variables.
+- Don't invent standards, material properties or part numbers; mark unknowns TODO.
+- Flag uncertainty instead of guessing; list open questions in README.md.
+- Keep functions small with docstrings so a student can explain each line to an instructor.
+- After each step, stop and wait for review.
+- Do not claim the design is validated. Only prototype tests can do that.
+- Keep code simple and readable. Ask before adding any library beyond CadQuery, cq_gears, numpy.
