@@ -1,0 +1,1232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>autoRAD bench rig: design explorer</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f4f2ed; --panel:#fcfcfb; --ink:#1d1f23; --muted:#5c5f66; --line:#dcd8cf; --grid:#ebe8e1;
+  --R:#eb6834; --Rl:#f5ac8a; --L:#2a78d6; --Ll:#93bcee; --car:#1baf7a; --cord:#6250d6; --band:#e87ba4;
+  --steel:#6e737b; --brg:#a9adb4; --tube:#cfd2d6; --board:#e3d6b8; --boardE:#b9a985; --dowel:#b08a5a; --hole:#3a3936;
+  --accent:#2a78d6; --warn:#b5560f;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --bg:#141517; --panel:#1c1e21; --ink:#ecebe6; --muted:#a3a7ae; --line:#34373c; --grid:#26292d;
+    --R:#d95926; --Rl:#f0a07a; --L:#3987e5; --Ll:#9cc0f0; --car:#199e70; --cord:#9085e9; --band:#d55181;
+    --steel:#9aa0a8; --brg:#c3c7cd; --tube:#5d6168; --board:#4a4234; --boardE:#7a6d52; --dowel:#8a6a42; --hole:#0c0c0c;
+    --accent:#3987e5; --warn:#f0a050;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#141517; --panel:#1c1e21; --ink:#ecebe6; --muted:#a3a7ae; --line:#34373c; --grid:#26292d;
+  --R:#d95926; --Rl:#f0a07a; --L:#3987e5; --Ll:#9cc0f0; --car:#199e70; --cord:#9085e9; --band:#d55181;
+  --steel:#9aa0a8; --brg:#c3c7cd; --tube:#5d6168; --board:#4a4234; --boardE:#7a6d52; --dowel:#8a6a42; --hole:#0c0c0c;
+  --accent:#3987e5; --warn:#f0a050;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1280px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start}
+h1{font-size:25px;margin:0 0 2px}
+h2{font-size:19px;margin:34px 0 4px;scroll-margin-top:150px}
+h3{font-size:15px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 12px;max-width:860px}
+p.lead{color:var(--muted);margin:0 0 12px;max-width:900px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
+nav a{font-size:13px;color:var(--ink);text-decoration:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 11px}
+nav a:hover{border-color:var(--muted)}
+.controls{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0 10px;border-bottom:1px solid var(--line);margin:10px 0 6px}
+.crow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.crow label{font-weight:600}
+input[type=range]{flex:1 1 260px;accent-color:var(--accent)}
+button,select{font:inherit;font-size:14px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.presets{display:flex;gap:4px;flex-wrap:wrap}
+.presets button{padding:3px 8px;font-size:13px;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px;margin-top:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px 10px}
+.stat b{display:block;font-size:19px;font-variant-numeric:tabular-nums;line-height:1.3}
+.stat span{color:var(--muted);font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card p{margin:0 0 8px;color:var(--muted);font-size:13px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.viewer{display:grid;grid-template-columns:1fr 270px;gap:14px}
+@media (max-width:1000px){.viewer,.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
+canvas{display:block;width:100%;border-radius:8px;background:var(--panel);touch-action:none}
+#c3d{height:560px;cursor:grab;border:1px solid var(--line)}
+#c3d:active{cursor:grabbing}
+.mini canvas{height:300px;border:1px solid var(--line)}
+.mini h3{font-size:13px;margin:0 0 4px}
+.side h3{margin-top:12px}
+.side h3:first-child{margin-top:0}
+.btnrow{display:flex;flex-wrap:wrap;gap:4px}
+.btnrow button{font-size:13px;padding:3px 9px}
+.chk{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;font-size:13px}
+.chk label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.sw{display:inline-block;width:11px;height:11px;border-radius:3px;flex:none}
+#hover{min-height:96px;font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px}
+#hover b{font-size:14px}
+.hint{font-size:12px;color:var(--muted)}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted);margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:16px;height:9px;border-radius:2px;display:inline-block}
+.legend i.ln{height:0;border-top:2px solid}
+.legend i.dash{height:0;border-top:2px dashed}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+tr.hl td{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+tr.live td{font-style:italic;color:var(--muted)}
+.tog{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;margin-bottom:6px}
+.tog label{display:flex;gap:5px;align-items:center;cursor:pointer}
+ol.route{margin:0;padding-left:20px;font-size:13px}
+ol.route li{padding:3px 6px;border-radius:6px;cursor:default}
+ol.route li:hover,ol.route li.on{background:color-mix(in srgb,var(--cord) 16%,transparent)}
+.note{font-size:13px;color:var(--muted)}
+.warnbox{border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 9%,var(--panel));padding:8px 12px;border-radius:6px;font-size:13.5px;margin:8px 0}
+.tip{position:fixed;pointer-events:none;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.15);display:none;font-variant-numeric:tabular-nums}
+.stack{display:flex;align-items:stretch;margin:4px 0 2px;flex-wrap:nowrap;overflow-x:auto}
+.chipz{border:1px solid var(--line);border-radius:4px;font-size:11.5px;padding:3px 4px;text-align:center;line-height:1.25;min-width:34px;margin-right:2px;color:var(--ink)}
+.chipz small{display:block;color:var(--muted);font-size:10.5px}
+.fast{padding:8px 0;border-bottom:1px solid var(--line)}
+.fast:last-child{border-bottom:0}
+.fast h3{font-size:13.5px;margin:0}
+.fast .note{margin:0}
+.pcard h3{font-size:15px}
+.facts{font-size:13px;margin:6px 0 0;padding-left:18px;color:var(--ink)}
+.facts li{margin:1px 0}
+kbd{font:12px ui-monospace,monospace;border:1px solid var(--line);border-radius:4px;padding:0 4px;background:var(--bg)}
+code{font:12.5px ui-monospace,monospace}
+footer{margin-top:40px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div>
+    <h1>autoRAD bench rig: design explorer</h1>
+    <p class="sub">The final bench rig from <code>docs/design_spec.md</code> (2026-11-10). Use the slider to move the whole rig through its travel. Every view below updates with it. All numbers come from the spec and <code>bench_check.py</code>. <b>Nothing here is a test result.</b> Only the printed rig can validate it.</p>
+  </div>
+  <button id="theme" type="button" title="Switch light / dark">◐ Theme</button>
+</header>
+<nav>
+  <a href="#s3d">3D model</a><a href="#sortho">4 views</a><a href="#sfront">Front, dimensioned</a><a href="#srear">Cord &amp; carriage</a>
+  <a href="#sside">Layer stack</a><a href="#smotion">Motion</a><a href="#sparts">Printed parts</a><a href="#sboard">Board</a>
+  <a href="#sfast">Fasteners</a><a href="#sparams">Parameters</a><a href="#sopen">Open points</a>
+</nav>
+
+<div class="controls">
+  <div class="crow">
+    <label for="s">Cord payout (= attachment travel)</label>
+    <input id="s" type="range" min="0" max="300" step="1" value="0">
+    <button id="play" type="button">▶ Play</button>
+    <div class="presets" id="presets"></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="vS">0 mm</b><span>cord payout</span></div>
+    <div class="stat"><b id="vT">0.0 mm</b><span>carriage down (payout ÷ 4)</span></div>
+    <div class="stat"><b id="vB">0.00°</b><span>each handle turned</span></div>
+    <div class="stat"><b id="vA">50.0°</b><span>included angle</span></div>
+    <div class="stat"><b id="vD">+0.00°</b><span>vs linear 50→110°</span></div>
+    <div class="stat"><b id="vG">106.0 mm</b><span>grip-centre spacing</span></div>
+    <div class="stat"><b id="vP">195.8 mm</b><span>carriage pin height y</span></div>
+    <div class="stat"><b id="vM">69.6°</b><span>transmission angle</span></div>
+  </div>
+</div>
+
+<!-- ============================================================ 3D -->
+<h2 id="s3d">1 · 3D model</h2>
+<p class="lead">This is a rough model of every part, built from the spec numbers: plates, tubes, bearings, bolts, cord and band. Drag to rotate, right-drag or shift-drag to pan, and scroll to zoom. Double-click resets the view. Hover over a part to see what it is. The board hides everything behind it, so turn it off or use the <i>Back</i> view to see the cord.</p>
+<div class="viewer">
+  <canvas id="c3d" aria-label="Rotatable 3D model of the bench rig"></canvas>
+  <div class="side card">
+    <h3>View</h3>
+    <div class="btnrow" id="views"></div>
+    <h3>Explode the stack</h3>
+    <input id="explode" type="range" min="0" max="1" step="0.01" value="0" style="width:100%">
+    <div class="hint">Pulls the layers apart along z (front to back). The cord is hidden while exploded.</div>
+    <h3>Show</h3>
+    <div class="chk" id="layers"></div>
+    <h3>Hovered part</h3>
+    <div id="hover"><span class="hint">Point at a part.</span></div>
+  </div>
+</div>
+
+<!-- ============================================================ ORTHO -->
+<h2 id="sortho">2 · Four views at once</h2>
+<p class="lead">These views use the same model and update with the slider. The front view shows the handle side. The back view looks at the back of the board, so left and right are swapped. The side view looks from the left (−x), with the front of the board on the right. The top view looks down, with the front at the bottom. The board is hidden in the back, side and top views so you can see the parts behind it.</p>
+<div class="g4">
+  <div class="mini card"><h3>Front (+z)</h3><canvas id="vFront"></canvas></div>
+  <div class="mini card"><h3>Back (−z), board hidden</h3><canvas id="vBack"></canvas></div>
+  <div class="mini card"><h3>Side from −x, board hidden</h3><canvas id="vSide"></canvas></div>
+  <div class="mini card"><h3>Top (+y), board hidden</h3><canvas id="vTop"></canvas></div>
+</div>
+
+<!-- ============================================================ FRONT -->
+<h2 id="sfront">3 · Front view, dimensioned</h2>
+<p class="lead">This view is true to scale in the board frame: x points outward (right handle at +x), y points up, and the pivot line is y = 0. Parts are drawn back to front in the stack order: handle R, link R, link L, handle L. The carriage and the cord parts are behind the board and are shown dashed.</p>
+<div class="card">
+  <div class="tog">
+    <label><input type="checkbox" id="fDims" checked> dimensions</label>
+    <label><input type="checkbox" id="fGhost" checked> closed &amp; fully-open outlines</label>
+    <label><input type="checkbox" id="fBehind" checked> parts behind the board (dashed)</label>
+    <label><input type="checkbox" id="fLabels" checked> labels</label>
+  </div>
+  <svg id="front" viewBox="-190 -305 380 455" role="img" aria-label="Dimensioned front view"></svg>
+  <div class="legend">
+    <span><i style="background:var(--R)"></i>handle R (layer 1, z 0–8)</span>
+    <span><i style="background:var(--Rl)"></i>link R (2, z 8.3–14.3)</span>
+    <span><i style="background:var(--Ll)"></i>link L (3, z 14.6–20.6)</span>
+    <span><i style="background:var(--L)"></i>handle L (4, z 20.9–28.9)</span>
+    <span><i style="background:var(--dowel)"></i>dowel grip Ø20 × 130</span>
+    <span><i style="background:var(--car)"></i>carriage (behind)</span>
+  </div>
+</div>
+
+<!-- ============================================================ REAR -->
+<h2 id="srear">4 · Behind the board: carriage, pulleys and cord</h2>
+<p class="lead">The cord makes four vertical runs between the two moving bearings on the carriage (M1, M2) and the two fixed bearings on standoffs (F0, F1). Paying out 1 mm of cord pulls the carriage down ¼ mm. Solid lines are the <b>near</b> lane (z −36) and dashed lines are the <b>far</b> lane (z −52). Hover over a routing step to highlight it.</p>
+<div class="g2" style="grid-template-columns:1.35fr 1fr">
+  <div class="card">
+    <div class="tog">
+      <label><input type="checkbox" id="rMirror"> mirror (as you see it standing behind the board)</label>
+      <label><input type="checkbox" id="rLabels" checked> labels</label>
+    </div>
+    <svg id="rear" viewBox="-118 -322 290 352" role="img" aria-label="Rear view of the cord routing"></svg>
+    <div class="legend">
+      <span><i class="ln" style="border-color:var(--cord)"></i>cord, near lane z −36</span>
+      <span><i class="dash" style="border-color:var(--cord)"></i>cord, far lane z −52</span>
+      <span><i style="background:var(--car)"></i>carriage plate</span>
+      <span><i style="background:var(--brg)"></i>bearings 625ZZ Ø16</span>
+      <span><i class="ln" style="border-color:var(--band)"></i>return band</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Cord route (design_spec §5)</h3>
+    <ol class="route" id="route"></ol>
+    <p class="note" style="margin-top:10px">Why it works: each of the 4 runs gets shorter by the same amount as the carriage drops. So 300 mm of payout is 4 × 75 mm. All four runs are vertical and every one pulls the carriage <b>down</b>. The band pulls it back up, which closes the handles and takes the cord back in.</p>
+    <p class="note">Why there are two lanes: the moving axle runs along x, so cord goes over each moving bearing from the near lane (z −36) to the far lane (z −52). The fixed bearings have their axles along z, so each one turns the cord sideways (x) within a single lane.</p>
+  </div>
+</div>
+
+<!-- ============================================================ SIDE -->
+<h2 id="sside">5 · Layer stack (side section)</h2>
+<p class="lead">This view looks from the left (−x), with z running left to right, so the front of the board is on the right. Every part is placed at its z range from design_spec §4. Use it to check spacer and standoff lengths and that the plates don't touch. Heights (y) follow the slider.</p>
+<div class="card">
+  <svg id="side" style="max-width:620px;margin:0 auto" viewBox="-140 -312 330 500" role="img" aria-label="Side view of the z layer stack"></svg>
+  <div class="legend">
+    <span><i style="background:var(--board)"></i>board z −12…0</span>
+    <span><i style="background:var(--car)"></i>carriage plate z −20…−12, post to −52</span>
+    <span><i style="background:var(--tube)"></i>printed tubes / standoffs</span>
+    <span><i style="background:var(--brg)"></i>bearings</span>
+    <span><i class="ln" style="border-color:var(--cord)"></i>cord lanes</span>
+  </div>
+</div>
+
+<!-- ============================================================ MOTION -->
+<h2 id="smotion">6 · Motion: angle vs travel</h2>
+<p class="lead">The included angle between the grips as the cord pays out. Hover over the chart to read values and click to move the rig there. The dashed line is a perfectly linear 50° → 110°. The bench rig stops at 300 mm. The full attachment would hold 110° up to 400 mm, but the bench rig has no overtravel protection, so keep the pull at or under 300 mm.</p>
+<div class="g2">
+  <div class="card">
+    <h3>Included angle [°]</h3>
+    <svg id="plotA" viewBox="0 0 560 300" role="img" aria-label="Included angle versus travel"></svg>
+    <div class="legend"><span><i class="ln" style="border-color:var(--accent)"></i>linkage (model)</span><span><i class="dash" style="border-color:var(--muted)"></i>linear target</span></div>
+  </div>
+  <div class="card">
+    <h3>Deviation from linear [°] (limit ±1.5° = 2.5 % of 60°)</h3>
+    <svg id="plotD" viewBox="0 0 560 300" role="img" aria-label="Deviation from linear versus travel"></svg>
+    <div class="legend"><span><i class="ln" style="border-color:var(--accent)"></i>linkage − linear</span><span><i class="dash" style="border-color:var(--muted)"></i>±2.5 % limit</span></div>
+  </div>
+</div>
+<div class="card" style="margin-top:14px">
+  <h3>Reference positions: check your CAD and your bench measurements against these (design_spec §7, verified by bench_check.py)</h3>
+  <table id="reftab"></table>
+  <p class="note" style="margin-top:6px">The highlighted row is the one nearest the slider. The italic bottom row is the live value. Transmission angle is at least 64° over the whole travel, and the hand torque always acts to close the handles.</p>
+</div>
+
+<!-- ============================================================ PARTS -->
+<h2 id="sparts">7 · Printed parts (5 models, 16 pieces, ~9 h)</h2>
+<p class="lead">Each part is drawn in its own frame and to scale, with dimensions in mm. All pin holes are the pin size + 0.3 mm. Print in PETG or PLA at 0.28 mm layers, 3 walls, 25–40 % infill. STL files are in <code>exports/stl/</code> and print orientations are in <code>parts_list.md</code>.</p>
+<div class="g2">
+  <div class="card pcard"><h3>P1 · Handle (bell crank) × 2</h3><svg id="pHandle" viewBox="-130 -114 252 230"></svg>
+    <ul class="facts">
+      <li>One flat 8 mm plate, origin at the pivot bore. The drawing shows the right handle. The left handle is <b>the same print turned over</b>; don't mirror it in the slicer.</li>
+      <li>The joint hole has a 90° countersink Ø11 on the back face, for an M5 × 25 countersunk screw with its head flush.</li>
+      <li>Fillet the inside corners R5. Bed footprint is about 167 × 167 mm, so you need a bed of at least 170 × 170. ~2.7 h each.</li>
+    </ul></div>
+  <div class="card pcard"><h3>P3 · Carriage × 1</h3><svg id="pCarriage" viewBox="-86 -84 196 114"></svg>
+    <ul class="facts">
+      <li>8 mm plate behind the board (z −20…−12) with a post that sticks 32 mm further back (to z −52).</li>
+      <li>The axle hole goes through the post along x, 24 mm behind the plate's back face (z −44). It bridges without support.</li>
+      <li>The part is handed: seen from the front, the post is on the left. Don't mirror it. Print it with the board-side face down. ~1.3 h.</li>
+      <li>Band hook: two Ø4 holes. <b>Use the lower one</b>, at (4, −5.5).</li>
+    </ul></div>
+  <div class="card pcard"><h3>P2 · Link × 2 (identical)</h3><svg id="pLink" viewBox="-20 -28 175 52"></svg>
+    <ul class="facts"><li>120.0 mm between hole centres, 12 wide, 6 thick, end bosses R8, holes Ø5.3. Printed flat, ~0.6 h each. Print one first and test-fit an M5 bolt.</li></ul></div>
+  <div class="card pcard"><h3>P4 · Tubes &amp; standoffs (one model, length is the parameter)</h3><svg id="pTubes" viewBox="-4 -42 250 60"></svg>
+    <table style="margin-top:6px"><tr><th>Use</th><th>Bore</th><th>OD</th><th>Length</th><th>Qty</th></tr>
+      <tr><td>P4a left-handle spacer (board → handle L)</td><td>8.3</td><td>24</td><td><b>20.9</b></td><td>1</td></tr>
+      <tr><td>P4b carriage-pin spacer (board → link R)</td><td>5.3</td><td>10</td><td><b>8.3</b></td><td>1</td></tr>
+      <tr><td>P4c F1 standoff (board back → flange)</td><td>5.3</td><td>10</td><td><b>37.5</b></td><td>1 + 1 spare</td></tr>
+      <tr><td>P4d F0 standoff</td><td>5.3</td><td>10</td><td><b>21.5</b></td><td>1 + 1 spare</td></tr>
+      <tr><td>P4e dead-end standoff</td><td>5.3</td><td>10</td><td><b>23.0</b></td><td>1</td></tr>
+    </table></div>
+  <div class="card pcard"><h3>P5 · Flange washer × 6 (+ spares)</h3><svg id="pFlange" viewBox="-14 -16 150 32" style="max-width:460px"></svg>
+    <ul class="facts"><li>Disc Ø20 × 1, bore Ø5.3. One goes on each side of each bearing (M1, M2, F1) to keep the cord on the Ø16 bearing.</li>
+    <li>If 625ZZ bearings can't be bought, print plain pulleys Ø16 × 7 with a Ø5.3 bore (<code>optional_plain_pulley.stl</code>). They have more friction, but the demo still works.</li></ul></div>
+  <div class="card pcard"><h3>Bought: 625ZZ bearing × 3 (+1)</h3><svg id="pBrg" viewBox="-14 -16 150 32" style="max-width:460px"></svg>
+    <ul class="facts"><li>Bore 5, OD 16, width 5. It runs directly as a pulley: the cord rides on the outer ring. M1 and M2 sit on the carriage axle and F1 sits on its standoff. F0 is listed as a bearing in the cord route, but design_spec §5 lists flanges only for M1, M2 and F1.</li></ul></div>
+</div>
+
+<!-- ============================================================ BOARD -->
+<h2 id="sboard">8 · Board: 200 × 290 × 12 plywood (front face shown)</h2>
+<p class="lead">The board frame has its bottom-left corner at (−100, −20). Print the 1:1 template <code>docs/img/board_template_1to1.pdf</code> at 100 % and check its 100 mm bar. The drawing below is the same layout. The bolt heads on the front face must be flat (countersunk or button head, no more than 3.5 mm proud), because link R passes over the F0 and F1 heads.</p>
+<div class="g2" style="grid-template-columns:1.2fr 1fr">
+  <div class="card"><svg id="board" viewBox="-190 -296 400 345" role="img" aria-label="Board drilling layout"></svg></div>
+  <div class="card">
+    <div class="warnbox"><b>Slot 1 and slot 2 overlap.</b> Both are at x = 0. Slot 1 runs y 117.6 → 198.9 and slot 2 runs y 177.6 → 258.9. They overlap by 21.3 mm, so in the board they are <b>one slot, y 117.6 → 258.9, 141.3 mm long, 5.3 wide</b>. The carriage pin and the guide bolt are always 60 mm apart on the carriage, so they never meet. Cut it as one slot. Check the board stays stiff enough beside it.</div>
+    <table id="holetab"></table>
+  </div>
+</div>
+
+<!-- ============================================================ FASTENERS -->
+<h2 id="sfast">9 · Fastener stacks (assembly order, design_spec §4 and demo_sheet A)</h2>
+<p class="lead">Each row shows one bolt, from its head to its nut. The chip widths are proportional to the thicknesses given in the spec. Grey chips (washers, heads and nuts) have no specified thickness and are not to scale.</p>
+<div class="card" id="fasteners"></div>
+
+<!-- ============================================================ PARAMS -->
+<h2 id="sparams">10 · Parameters</h2>
+<div class="g2">
+  <div class="card"><h3>Master table (enter as Fusion / Inventor user parameters)</h3><table id="ptab"></table></div>
+  <div class="card"><h3>Derived (write these as equations in CAD)</h3><table id="dtab"></table>
+    <h3 style="margin-top:14px">Loads (model values at 200 N per hand; reference only)</h3>
+    <table><tr><td>link</td><td>68 N</td></tr><tr><td>carriage pin</td><td>108 N</td></tr><tr><td>cord</td><td>36–43 N</td></tr></table>
+    <p class="note" style="margin-top:6px">The bench runs at no more than 2 kg per grip, and at 20 N per hand the cord carries about 8 N. bench_check.py and design_spec §9 give different cord numbers at 200 N (36.4 vs 43 N).</p></div>
+</div>
+
+<!-- ============================================================ OPEN -->
+<h2 id="sopen">11 · Open points and deliberate simplifications</h2>
+<div class="g2">
+  <div class="card"><h3>Open (from the assembly check, design_spec §8a)</h3><ul class="facts">
+    <li>At full open, the right arm clears the left-handle spacer by only <b>0.51 mm</b>.</li>
+    <li>The flange washers overlap the post by 0.5 mm per side. Leave out the two plain washers beside the post.</li>
+    <li>F1 and F0 bearings sit <b>1 mm behind their lane plane</b>, because the 37.5 and 21.5 mm standoffs don't allow for the 1 mm flange. The 3D model shows this.</li>
+    <li>The wall beside the carriage pin hole is only 1.35 mm thick.</li>
+    <li>The plates in the front stack have only 0.3 mm gaps, which is intended. Washers set the real gap.</li>
+    <li>Slots 1 and 2 merge into one 141.3 mm slot (section 8). The spec doesn't mention this.</li>
+    <li>Bearing F0: the cord route treats it as a bearing, but no flanges are listed for it (P5 says M1, M2, F1). Confirm whether F0 is a 625ZZ with flanges or something else.</li>
+  </ul></div>
+  <div class="card"><h3>Deliberately simplified (design_spec §9, say so in the report)</h3><ul class="facts">
+    <li>No housing, no guards, not machine-mountable. No spool and no gears: a 4-part reeved cord replaces them.</li>
+    <li>Grips are Ø20 dowels instead of Ø32, and they sit 20.9 mm apart in z.</li>
+    <li>Hand clearance isn't addressed. Nothing protects against overtravel past 300 mm.</li>
+    <li>Bearing pulleys are Ø16 with a 1.5 mm cord. Return is a rubber band (2–5 N in the cord); there is no anchor spring.</li>
+  </ul></div>
+</div>
+
+<footer>Sources: docs/design_spec.md, docs/buy_list.md, docs/demo_sheet.md, parts_list.md, bench_check.py output. Kinematics are recomputed in this page from the master parameters and match design_spec §7 to 0.1 mm. Bolt heads, nuts and washers in the 3D model are simplified shapes. This is a private course project, so don't upload this file.</footer>
+</main>
+<div class="tip" id="tip"></div>
+
+<script>
+(() => {
+"use strict";
+// =====================================================================  parameters (design_spec §1)
+const S_CLOSED = 106, DELTA_S = 70, TH = 3, BMAX = 30, A = 125.9, C = 120, PSI = 42, N = 4;
+const HUB_R = 12, BOSS_R = 8, ARM_W = 16, LINK_W = 12, PLATE_T = 8, LINK_T = 6, PAD_W = 24, PAD_L = 60;
+const DOWEL_D = 20, DOWEL_L = 130, BRG_R = 8, BRG_W = 5, FL_R = 10;
+const BOARD = {x0: -100, x1: 100, y0: -20, y1: 270, z0: -12, z1: 0};
+const Z = {hR: [0, 8], lR: [8.3, 14.3], lL: [14.6, 20.6], hL: [20.9, 28.9], plate: [-20, -12], post: [-52, -20], axle: -44, near: -36, far: -52};
+const YF = 141.7, XF1 = -14, XF0 = -30, XM1 = -22, XM2 = -6, XANCH = -38, DEAD = [-6, 95];
+const AXLE_ABOVE = 45, GUIDE_ABOVE = 60, BAND_SCREW = [20, 262];
+const SLOT1 = [117.6, 198.9], SLOT2 = [177.6, 258.9], SLOT_W = 5.3;
+const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
+const LL = DELTA_S / (2 * (Math.sin(rad(TH + BMAX)) - Math.sin(rad(TH))));   // 71.09
+const P = S_CLOSED - 2 * LL * Math.sin(rad(TH));                               // 98.56
+const OX = P / 2;                                                              // 49.28
+
+// =====================================================================  kinematics (kinematics_D.py)
+const joint = b => { const a = rad(180 - PSI + b); return [OX + A * Math.cos(a), A * Math.sin(a)]; };
+const pinY = b => { const [x, y] = joint(b); return y + Math.sqrt(C * C - x * x); };
+const Y0 = pinY(0);
+const travel = b => Y0 - pinY(b);
+const SSTOP = N * travel(BMAX);
+function betaOf(s) {
+  const t = Math.min(Math.max(s, 0), SSTOP) / N; let lo = 0, hi = BMAX;
+  for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (travel(m) < t) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+function state(s) {
+  const b = betaOf(s), O = [OX, 0], J = joint(b), pin = [0, pinY(b)];
+  const G = [OX + LL * Math.cos(rad(273 + b)), LL * Math.sin(rad(273 + b))];
+  const ax = [Math.cos(rad(115 + b)), Math.sin(rad(115 + b))];   // grip-pad long axis (upward, toward centre)
+  const ua = [(J[0] - O[0]) / A, (J[1] - O[1]) / A], ul = [(pin[0] - J[0]) / C, (pin[1] - J[1]) / C];
+  let mu = deg(Math.acos(ua[0] * ul[0] + ua[1] * ul[1])); if (mu > 90) mu = 180 - mu;
+  const incl = 50 + 2 * b, lin = 50 + 60 * Math.min(s, 300) / 300;
+  return {s, b, O, J, G, ax, pin, t: Y0 - pin[1], incl, dev: incl - lin, grip: 2 * G[0], mu, ay: pin[1] + AXLE_ABOVE, gy: pin[1] + GUIDE_ABOVE};
+}
+const mir = p => [-p[0], p[1]];
+
+// =====================================================================  2D shape helpers
+const circ = (c, r, n = 28) => Array.from({length: n}, (_, i) => [c[0] + r * Math.cos(2 * Math.PI * i / n), c[1] + r * Math.sin(2 * Math.PI * i / n)]);
+function bar(p, q, w) {
+  const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy), nx = -dy / L * w / 2, ny = dx / L * w / 2;
+  return [[p[0] + nx, p[1] + ny], [q[0] + nx, q[1] + ny], [q[0] - nx, q[1] - ny], [p[0] - nx, p[1] - ny]];
+}
+function rectAx(c, ax, len, wid) {
+  const u = ax, v = [-ax[1], ax[0]], a = len / 2, b = wid / 2;
+  return [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([i, j]) => [c[0] + u[0] * a * i + v[0] * b * j, c[1] + u[1] * a * i + v[1] * b * j]);
+}
+const rectXY = (x0, x1, y0, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+// handle as convex pieces (right handle; left = mirror). Also holes.
+function handleShape(st, left) {
+  const f = left ? mir : (p => p);
+  const {O, J, G, ax} = st;
+  const pieces = [circ(O, HUB_R), bar(O, J, ARM_W), circ(J, BOSS_R), bar(O, G, ARM_W), rectAx(G, ax, PAD_L, PAD_W)].map(pc => pc.map(f));
+  const holes = [[O, 8.3 / 2], [J, 5.3 / 2], [[G[0] + ax[0] * 20, G[1] + ax[1] * 20], 4.3 / 2], [[G[0] - ax[0] * 20, G[1] - ax[1] * 20], 4.3 / 2]].map(([c, r]) => [f(c), r]);
+  return {pieces, holes, O: f(O), J: f(J), G: f(G), ax: left ? [-ax[0], ax[1]] : ax};
+}
+function linkShape(st, left) {
+  const J = left ? mir(st.J) : st.J, Pn = st.pin;
+  return {pieces: [bar(J, Pn, LINK_W), circ(J, BOSS_R), circ(Pn, BOSS_R)], holes: [[J, 2.65], [Pn, 2.65]], J, Pn};
+}
+const carriageRects = py => [rectXY(-4, 8, py - 10, py + 65), rectXY(-32, 8, py + 55, py + 65)];
+
+// =====================================================================  colours (read CSS vars)
+let COL = {};
+function readColours() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ["bg", "panel", "ink", "muted", "line", "grid", "R", "Rl", "L", "Ll", "car", "cord", "band", "steel", "brg", "tube", "board", "boardE", "dowel", "hole", "accent", "warn"])
+    COL[k] = cs.getPropertyValue("--" + k).trim();
+}
+const hex2rgb = h => { h = h.replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join(""); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const isDark = () => getComputedStyle(document.documentElement).getPropertyValue("color-scheme").trim() === "dark";
+
+// =====================================================================  3D scene
+// A solid = { key, faces: [[ [x,y,z], ... ], ...], col (css var key), k (explode level), grp }
+const META = {
+  board: ["Board", "Plywood 200 × 290 × 12. Front face z = 0. Holes and the slot are shown dark.", "board"],
+  hR: ["Handle R (P1)", "Bell crank, 8 mm plate, layer 1 (z 0–8). Drive arm 125.9 mm at 138°, long arm 71.09 mm to the grip.", "handles"],
+  hL: ["Handle L (P1, turned over)", "Same print as handle R, turned over. Layer 4 (z 20.9–28.9), on the 20.9 mm spacer.", "handles"],
+  lR: ["Link R (P2)", "120.0 mm between holes, 12 × 6. Layer 2 (z 8.3–14.3). Joint R → carriage pin.", "links"],
+  lL: ["Link L (P2)", "120.0 mm between holes, 12 × 6. Layer 3 (z 14.6–20.6). Joint L → carriage pin.", "links"],
+  gR: ["Grip R: dowel Ø20 × 130 (bought)", "Screwed onto the grip pad with two 3.5 × 16 wood screws.", "grips"],
+  gL: ["Grip L: dowel Ø20 × 130 (bought)", "Sits 20.9 mm further forward than grip R (accepted for the bench).", "grips"],
+  car: ["Carriage (P3)", "8 mm plate behind the board (z −20…−12). The post goes back to z −52 and carries the moving axle at z −44.", "carriage"],
+  spL: ["Left-handle spacer (P4a)", "Ø24 × 20.9, bore 8.3. Lifts handle L to layer 4.", "tubes"],
+  spC: ["Carriage-pin spacer (P4b)", "Ø10 × 8.3, bore 5.3. Between the board face and link R.", "tubes"],
+  stF1: ["F1 standoff (P4c)", "Ø10 × 37.5 from the board's back face.", "tubes"],
+  stF0: ["F0 standoff (P4d)", "Ø10 × 21.5 from the board's back face.", "tubes"],
+  stD: ["Dead-end standoff (P4e)", "Ø10 × 23.0. The cord is tied above the nut.", "tubes"],
+  M1: ["M1: moving bearing 625ZZ", "On the carriage axle at x −22. Cord goes over it from the far lane to the near lane.", "pulleys"],
+  M2: ["M2: moving bearing 625ZZ", "On the carriage axle at x −6. Cord comes up from the dead end and goes over it.", "pulleys"],
+  F1: ["F1: fixed bearing 625ZZ", "At (−14, 141.7), far lane. Turns the cord from x −6 to x −22. Sits 1 mm behind the lane plane (open point).", "pulleys"],
+  F0: ["F0: fixed fairlead bearing", "At (−30, 141.7), near lane. Turns the cord from x −22 to the anchor lane x −38.", "pulleys"],
+  fl: ["Flange washer (P5)", "Ø20 × 1, one on each side of each bearing.", "pulleys"],
+  pivR: ["Pivot R bolt M8 × 35", "Through the board at (+49.28, 0). Nut plus 2 washers. Tighten only until the handle swings freely.", "bolts"],
+  pivL: ["Pivot L bolt M8 × 50", "Through the board, the 20.9 spacer and handle L at (−49.28, 0).", "bolts"],
+  pinB: ["Carriage pin bolt M5 × 50", "Carriage plate → slot → spacer 8.3 → link R → washer → link L → nut.", "bolts"],
+  guideB: ["Guide bolt M5 × 30", "Carriage plate → slot → washer → nut (loose enough to slide).", "bolts"],
+  jR: ["Joint pin R: M5 × 25 countersunk", "Head flush in handle R's countersink. Nut on the link side.", "bolts"],
+  jL: ["Joint pin L: M5 × 25 countersunk", "Head flush in handle L's countersink. Nut on the link side.", "bolts"],
+  axle: ["Carriage axle M5 × 35", "Along x through the post at z −44, carrying M1 and M2.", "bolts"],
+  bF1: ["F1 bolt M5 × 70, flat head", "Flat head on the front face, standoff 37.5, flange, bearing, flange, nut.", "bolts"],
+  bF0: ["F0 bolt M5 × 50, flat head", "Same as F1, with the 21.5 standoff.", "bolts"],
+  bD: ["Dead-end bolt M5 × 45, flat head", "The cord is tied here at (−6, 95).", "bolts"],
+  scr: ["Band screw", "Wood screw in the back face at (+20, 262).", "bolts"],
+  cord: ["Cord, braided ~1.5 mm", "4 vertical runs between the carriage and the fixed bearings, then up the anchor lane x −38 to the fixed anchor.", "cord"],
+  band: ["Return band", "Rubber band from the lower carriage hook (4, −5.5) to the band screw. It closes the handles on the way back.", "cord"],
+};
+const GROUPS = [["board", "board", "board"], ["handles", "handles", "R"], ["links", "links", "Rl"], ["grips", "grips", "dowel"], ["carriage", "carriage", "car"],
+                ["pulleys", "bearings", "brg"], ["tubes", "spacers", "tube"], ["bolts", "bolts", "steel"], ["cord", "cord &amp; band", "cord"]];
+const show = Object.fromEntries(GROUPS.map(g => [g[0], true]));
+
+function prism(pts, z0, z1) {
+  const top = pts.map(p => [p[0], p[1], z1]), bot = pts.map(p => [p[0], p[1], z0]).reverse(), faces = [top, bot];
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; faces.push([[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]]); }
+  return faces;
+}
+// cylinder: centre-line point c, unit axis a, radius r, from t0 to t1 along the axis
+function cyl(c, a, r, t0, t1, n = 22) {
+  const tmp = Math.abs(a[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+  let u = [a[1] * tmp[2] - a[2] * tmp[1], a[2] * tmp[0] - a[0] * tmp[2], a[0] * tmp[1] - a[1] * tmp[0]];
+  const ul = Math.hypot(...u); u = u.map(v => v / ul);
+  const v = [a[1] * u[2] - a[2] * u[1], a[2] * u[0] - a[0] * u[2], a[0] * u[1] - a[1] * u[0]];
+  const ring = t => Array.from({length: n}, (_, i) => { const q = 2 * Math.PI * i / n, cs = Math.cos(q) * r, sn = Math.sin(q) * r;
+    return [c[0] + a[0] * t + u[0] * cs + v[0] * sn, c[1] + a[1] * t + u[1] * cs + v[1] * sn, c[2] + a[2] * t + u[2] * cs + v[2] * sn]; });
+  const R0 = ring(t0), R1 = ring(t1), faces = [R1, R0.slice().reverse()];
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; faces.push([R0[i], R0[j], R1[j], R1[i]]); }
+  return faces;
+}
+const cylZ = (x, y, r, z0, z1, n) => cyl([x, y, 0], [0, 0, 1], r, z0, z1, n);
+function tubeLine(pts, r) {   // polyline as thin cylinders
+  const f = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p = pts[i], q = pts[i + 1], d = [q[0] - p[0], q[1] - p[1], q[2] - p[2]], L = Math.hypot(...d);
+    if (L < 1e-6) continue;
+    f.push(...cyl(p, d.map(v => v / L), r, 0, L, 6));
+  }
+  return f;
+}
+function arc3(c, u, v, r, a0, a1, n = 10) { return Array.from({length: n + 1}, (_, i) => { const a = a0 + (a1 - a0) * i / n; return [c[0] + r * (Math.cos(a) * u[0] + Math.sin(a) * v[0]), c[1] + r * (Math.cos(a) * u[1] + Math.sin(a) * v[1]), c[2] + r * (Math.cos(a) * u[2] + Math.sin(a) * v[2])]; }); }
+function cordPath(st) {
+  const ay = st.ay, ex = [1, 0, 0], ey = [0, 1, 0], ez = [0, 0, 1], R = BRG_R, PI = Math.PI;
+  return [[DEAD[0], DEAD[1], Z.near],
+    ...arc3([XM2, ay, Z.axle], ez, ey, R, 0, PI),                    // over M2: near → far
+    ...arc3([XF1, YF, Z.far], ex, ey, R, 0, -PI),                   // under F1: x −6 → x −22
+    ...arc3([XM1, ay, Z.axle], ez, ey, R, PI, 0),                   // over M1: far → near
+    ...arc3([XF0, YF, Z.near], ex, ey, R, 0, -PI),                  // under F0: x −22 → x −38
+    [XANCH, BOARD.y1, Z.near], [XANCH, BOARD.y1 + 45, Z.near]];
+}
+function buildScene(st) {
+  const S = [], add = (key, faces, col, k, grp) => S.push({key, faces, col, k, grp: grp || META[key][2]});
+  // board + decals (holes, slot, notch) slightly proud of both faces
+  add("board", prism(rectXY(BOARD.x0, BOARD.x1, BOARD.y0, BOARD.y1), BOARD.z0, BOARD.z1), "board", 0);
+  const dec = [];
+  for (const zz of [[0, 0.15], [-12.15, -12]]) {
+    dec.push(...prism(rectXY(-SLOT_W / 2, SLOT_W / 2, SLOT1[0], SLOT2[1]), ...zz));
+    for (const [x, y, d] of [[OX, 0, 8.3], [-OX, 0, 8.3], [XF1, YF, 5.3], [XF0, YF, 5.3], [DEAD[0], DEAD[1], 5.3]]) dec.push(...prism(circ([x, y], d / 2, 14), ...zz));
+    dec.push(...prism(rectXY(XANCH - 1.5, XANCH + 1.5, BOARD.y1 - 3, BOARD.y1 + 0.1), ...zz));
+  }
+  add("board", dec, "hole", 0);
+  // handles
+  for (const [key, left, z, k] of [["hR", false, Z.hR, 1], ["hL", true, Z.hL, 4]]) {
+    const h = handleShape(st, left), f = [];
+    for (const pc of h.pieces) f.push(...prism(pc, z[0], z[1]));
+    add(key, f, left ? "L" : "R", k);
+    const hf = []; for (const [c, r] of h.holes) hf.push(...prism(circ(c, r, 14), z[0] - 0.12, z[1] + 0.12));
+    add(key, hf, "hole", k);
+    // grip dowel on the pad's front face
+    const zc = z[1] + DOWEL_D / 2;
+    add(left ? "gL" : "gR", cyl([h.G[0], h.G[1], zc], [h.ax[0], h.ax[1], 0], DOWEL_D / 2, -DOWEL_L / 2, DOWEL_L / 2, 24), "dowel", k + 0.6);
+  }
+  // links
+  for (const [key, left, z, k] of [["lR", false, Z.lR, 2], ["lL", true, Z.lL, 3]]) {
+    const l = linkShape(st, left), f = [];
+    for (const pc of l.pieces) f.push(...prism(pc, z[0], z[1]));
+    add(key, f, left ? "Ll" : "Rl", k);
+    const hf = []; for (const [c, r] of l.holes) hf.push(...prism(circ(c, r, 14), z[0] - 0.12, z[1] + 0.12)); add(key, hf, "hole", k);
+  }
+  // spacers on the front
+  add("spL", cylZ(-OX, 0, 12, 0, 20.9), "tube", 2.2);
+  add("spC", cylZ(0, st.pin[1], 5, 0, 8.3), "tube", 1);
+  // fasteners, front side
+  add("pivR", [...cylZ(OX, 0, 4, -15, 13), ...cylZ(OX, 0, 6.5, -20.5, -15, 6), ...cylZ(OX, 0, 6.5, 9.5, 16, 6)], "steel", 5.5);
+  add("pivL", [...cylZ(-OX, 0, 4, -15, 34), ...cylZ(-OX, 0, 6.5, -20.5, -15, 6), ...cylZ(-OX, 0, 6.5, 30.5, 37, 6)], "steel", 5.5);
+  add("pinB", [...cylZ(0, st.pin[1], 2.5, -23.5, 27), ...cylZ(0, st.pin[1], 4.5, -23.5, -20, 16), ...cylZ(0, st.pin[1], 4.5, 21.6, 25.6, 6)], "steel", 5.5);
+  add("guideB", [...cylZ(0, st.gy, 2.5, -23.5, 6), ...cylZ(0, st.gy, 4.5, -23.5, -20, 16), ...cylZ(0, st.gy, 4.5, 1, 5, 6)], "steel", 5.5);
+  const jR = st.J, jL = mir(st.J);
+  add("jR", [...cylZ(jR[0], jR[1], 2.5, 0, 18), ...cylZ(jR[0], jR[1], 4.5, 15.3, 19.3, 6)], "steel", 5.5);
+  add("jL", [...cylZ(jL[0], jL[1], 2.5, 7, 28.9), ...cylZ(jL[0], jL[1], 4.5, 9.6, 13.6, 6)], "steel", 5.5);
+  // carriage plate + post (behind)
+  const py = st.pin[1], cf = [];
+  for (const r of carriageRects(py)) cf.push(...prism(r, Z.plate[0], Z.plate[1]));
+  cf.push(...prism(rectXY(-19, -9, py + 35, py + 55), Z.post[0], Z.post[1]));
+  add("car", cf, "car", -2);
+  const ch = []; for (const [x, y, d] of [[0, py, 5.3], [0, py + 60, 5.3], [4, py - 5.5, 4], [4, py + 54.5, 4]]) ch.push(...prism(circ([x, y], d / 2, 12), Z.plate[0] - 0.12, Z.plate[1] + 0.12));
+  add("car", ch, "hole", -2);
+  // moving axle and bearings
+  const ay = st.ay;
+  add("axle", [...cyl([0, ay, Z.axle], [1, 0, 0], 2.5, -32, 3), ...cyl([0, ay, Z.axle], [1, 0, 0], 4.5, -36, -32, 6), ...cyl([0, ay, Z.axle], [1, 0, 0], 4.5, 3, 7, 6)], "steel", -3.2);
+  for (const [key, x] of [["M1", XM1], ["M2", XM2]]) {
+    add(key, cyl([x, ay, Z.axle], [1, 0, 0], BRG_R, -BRG_W / 2, BRG_W / 2, 24), "brg", -3.2);
+    add("fl", [...cyl([x, ay, Z.axle], [1, 0, 0], FL_R, -BRG_W / 2 - 1, -BRG_W / 2, 24), ...cyl([x, ay, Z.axle], [1, 0, 0], FL_R, BRG_W / 2, BRG_W / 2 + 1, 24)], "tube", -3.2, "pulleys");
+  }
+  // fixed bearings + standoffs + bolts (F1 sits at z −50.5…−55.5, i.e. 1 mm behind the lane — §8a)
+  add("stF1", cylZ(XF1, YF, 5, -49.5, -12), "tube", -1.5);
+  add("fl", [...cylZ(XF1, YF, FL_R, -50.5, -49.5, 24), ...cylZ(XF1, YF, FL_R, -56.5, -55.5, 24)], "tube", -3.2, "pulleys");
+  add("F1", cylZ(XF1, YF, BRG_R, -55.5, -50.5, 24), "brg", -3.2);
+  add("bF1", [...cylZ(XF1, YF, 2.5, -66, 0), ...cylZ(XF1, YF, 5, 0, 1.5, 16), ...cylZ(XF1, YF, 4.5, -60.5, -56.5, 6)], "steel", 5.5);
+  add("stF0", cylZ(XF0, YF, 5, -33.5, -12), "tube", -1.5);
+  add("fl", [...cylZ(XF0, YF, FL_R, -34.5, -33.5, 24), ...cylZ(XF0, YF, FL_R, -40.5, -39.5, 24)], "tube", -3.2, "pulleys");
+  add("F0", cylZ(XF0, YF, BRG_R, -39.5, -34.5, 24), "brg", -3.2);
+  add("bF0", [...cylZ(XF0, YF, 2.5, -48, 0), ...cylZ(XF0, YF, 5, 0, 1.5, 16), ...cylZ(XF0, YF, 4.5, -44.5, -40.5, 6)], "steel", 5.5);
+  add("stD", cylZ(DEAD[0], DEAD[1], 5, -35, -12), "tube", -1.5);
+  add("bD", [...cylZ(DEAD[0], DEAD[1], 2.5, -44, 0), ...cylZ(DEAD[0], DEAD[1], 5, 0, 1.5, 16), ...cylZ(DEAD[0], DEAD[1], 4.5, -39, -35, 6)], "steel", 5.5);
+  add("scr", [...cylZ(BAND_SCREW[0], BAND_SCREW[1], 1.75, -20, -12, 8), ...cylZ(BAND_SCREW[0], BAND_SCREW[1], 3.5, -22, -20, 12)], "steel", -1);
+  // cord + band
+  add("cord", tubeLine(cordPath(st), 1.0), "cord", 0);
+  add("band", tubeLine([[4, py - 5.5, -22], [BAND_SCREW[0], BAND_SCREW[1], -21]], 1.4), "band", 0);
+  return S;
+}
+
+// =====================================================================  software renderer (z-buffer, flat shading, outline pass, picking)
+function makeView(canvas, opts) {
+  const ctx = canvas.getContext("2d");
+  let W = 0, H = 0, img, buf32, zb, idb, nb, dpr = 1;
+  const cam = Object.assign({yaw: -32, pitch: 18, zoom: 1, panX: 0, panY: 0, target: [0, 72, -20]}, opts.cam);
+  const home = JSON.parse(JSON.stringify(cam));
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, opts.maxDpr || 1.75);
+    const r = canvas.getBoundingClientRect(); const w = Math.max(50, Math.round(r.width * dpr)), h = Math.max(50, Math.round(r.height * dpr));
+    if (w === W && h === H) return; W = canvas.width = w; H = canvas.height = h;
+    img = ctx.createImageData(W, H); buf32 = new Uint32Array(img.data.buffer); zb = new Float32Array(W * H); idb = new Int16Array(W * H); nb = new Float32Array(W * H * 3);
+  }
+  let lastIds = [];
+  function render(solids, explode, boardMode) {
+    resize();
+    const bg = hex2rgb(COL.panel), bgc = (255 << 24) | (bg[2] << 16) | (bg[1] << 8) | bg[0];
+    buf32.fill(bgc); zb.fill(-1e9); idb.fill(-1);
+    const cy = Math.cos(rad(cam.yaw)), sy = Math.sin(rad(cam.yaw)), cp = Math.cos(rad(cam.pitch)), sp = Math.sin(rad(cam.pitch));
+    const scale = cam.zoom * Math.min(W, H) / 470, t = cam.target, ox = W / 2 + cam.panX * dpr, oy = H / 2 + cam.panY * dpr;
+    const Lx = 0.35, Ly = 0.55, Lz = 0.76;
+    const dark = isDark();
+    lastIds = [];
+    const xf = (p, dz) => {
+      const x = p[0] - t[0], y = p[1] - t[1], z = p[2] + dz - t[2];
+      const x1 = x * cy + z * sy, z1 = -x * sy + z * cy, y2 = y * cp - z1 * sp, z2 = y * sp + z1 * cp;
+      return [ox + x1 * scale, oy - y2 * scale, z2];
+    };
+    solids.forEach(so => {
+      if (!show[so.grp]) return;
+      if (so.grp === "cord" && explode > 0.02) return;
+      if (so.key === "board" && boardMode === "hidden") return;
+      const id = lastIds.length; lastIds.push(so.key);
+      const dz = so.k * explode * 26;
+      const base = hex2rgb(COL[so.col]);
+      for (const face of so.faces) {
+        const pr = face.map(p => xf(p, dz));
+        // view-space normal
+        const a = pr[0], b = pr[1], c = pr[2];
+        const ux = b[0] - a[0], uy = -(b[1] - a[1]), uz = (b[2] - a[2]) * scale, vx = c[0] - a[0], vy = -(c[1] - a[1]), vz = (c[2] - a[2]) * scale;
+        let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
+        if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
+        const lam = Math.abs(nx * Lx + ny * Ly + nz * Lz), sh = dark ? 0.42 + 0.62 * lam : 0.55 + 0.5 * lam;
+        const r = Math.min(255, base[0] * sh) | 0, g = Math.min(255, base[1] * sh) | 0, bl = Math.min(255, base[2] * sh) | 0;
+        const col = (255 << 24) | (bl << 16) | (g << 8) | r;
+        for (let i = 1; i < pr.length - 1; i++) tri(pr[0], pr[i], pr[i + 1], col, id, nx, ny, nz);
+      }
+    });
+    // outline pass
+    const zt = Math.max(1.6, 2.5 / scale);
+    for (let y = 0; y < H - 1; y++) for (let x = 0; x < W - 1; x++) {
+      const i = y * W + x, j = i + 1, k = i + W, id = idb[i];
+      let edge = false;
+      for (const q of [j, k]) {
+        if (idb[q] !== id) { edge = true; break; }
+        if (id < 0) continue;
+        if (Math.abs(zb[q] - zb[i]) > zt) { edge = true; break; }
+        if (nb[i * 3] * nb[q * 3] + nb[i * 3 + 1] * nb[q * 3 + 1] + nb[i * 3 + 2] * nb[q * 3 + 2] < 0.86) { edge = true; break; }
+      }
+      if (edge) {
+        const tgt = (id >= 0 || idb[j] >= 0 || idb[k] >= 0) ? (zb[i] >= zb[j] && zb[i] >= zb[k] ? i : (zb[j] >= zb[k] ? j : k)) : -1;
+        if (tgt >= 0) { const c = buf32[tgt]; const f = dark ? 0.35 : 0.45; buf32[tgt] = (255 << 24) | (((c >> 16 & 255) * f) << 16) | (((c >> 8 & 255) * f) << 8) | ((c & 255) * f); }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  function tri(a, b, c, col, id, nx, ny, nz) {
+    const area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    if (Math.abs(area) < 1e-9) return;
+    let x0 = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0]))), x1 = Math.min(W - 1, Math.ceil(Math.max(a[0], b[0], c[0])));
+    let y0 = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1]))), y1 = Math.min(H - 1, Math.ceil(Math.max(a[1], b[1], c[1])));
+    if (x0 > x1 || y0 > y1) return;
+    const ia = 1 / area;
+    for (let y = y0; y <= y1; y++) {
+      const py = y + 0.5;
+      for (let x = x0; x <= x1; x++) {
+        const px = x + 0.5;
+        const w0 = ((b[0] - px) * (c[1] - py) - (b[1] - py) * (c[0] - px)) * ia;
+        const w1 = ((c[0] - px) * (a[1] - py) - (c[1] - py) * (a[0] - px)) * ia;
+        const w2 = 1 - w0 - w1;
+        if (w0 < -1e-7 || w1 < -1e-7 || w2 < -1e-7) continue;
+        const d = w0 * a[2] + w1 * b[2] + w2 * c[2], i = y * W + x;
+        if (d > zb[i]) { zb[i] = d; buf32[i] = col; idb[i] = id; nb[i * 3] = nx; nb[i * 3 + 1] = ny; nb[i * 3 + 2] = nz; }
+      }
+    }
+  }
+  function pick(cx, cyy) { const r = canvas.getBoundingClientRect(); const x = Math.floor((cx - r.left) * dpr), y = Math.floor((cyy - r.top) * dpr); if (x < 0 || y < 0 || x >= W || y >= H) return null; const id = idb[y * W + x]; return id >= 0 ? lastIds[id] : null; }
+  return {cam, home, render, pick, resize};
+}
+
+// =====================================================================  SVG helpers
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+const F = v => (+v).toFixed(2);
+const pathOf = pts => "M" + pts.map(p => F(p[0]) + " " + F(-p[1])).join(" L") + " Z";
+function defs(svg, size) {
+  const d = el("defs", {}, svg);
+  const m = el("marker", {id: svg.id + "-ar", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: size, markerHeight: size, orient: "auto-start-reverse", markerUnits: "userSpaceOnUse"}, d);
+  el("path", {d: "M0 1 L10 5 L0 9 Z", fill: "var(--muted)"}, m);
+  const h = el("pattern", {id: svg.id + "-hatch", width: 4, height: 4, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)"}, d);
+  el("line", {x1: 0, y1: 0, x2: 0, y2: 4, stroke: "var(--muted)", "stroke-width": 0.8, opacity: 0.6}, h);
+}
+// union-looking shape: thick stroke under, fill on top
+function shape(g, pieces, fill, stroke, sw, extra) {
+  const gg = el("g", extra || {}, g);
+  for (const pc of pieces) el("path", {d: pathOf(pc), fill: "none", stroke, "stroke-width": sw * 2, "stroke-linejoin": "round"}, gg);
+  for (const pc of pieces) el("path", {d: pathOf(pc), fill, stroke: "none"}, gg);
+  return gg;
+}
+function holes(g, hs, fill) { for (const [c, r] of hs) el("circle", {cx: F(c[0]), cy: F(-c[1]), r: F(r), fill: fill || "var(--panel)", stroke: "var(--ink)", "stroke-width": 0.35}, g); }
+function txt(g, x, y, s, o = {}) { return el("text", Object.assign({x: F(x), y: F(-y), "font-size": o.fs || 6, "text-anchor": o.a || "start", "dominant-baseline": "middle", "font-weight": o.w || 400, fill: o.fill || "var(--ink)"}, o.rot !== undefined ? {transform: `rotate(${o.rot} ${F(x)} ${F(-y)})`} : {}), g, s); }
+function lineW(g, p, q, o = {}) { return el("line", Object.assign({x1: F(p[0]), y1: F(-p[1]), x2: F(q[0]), y2: F(-q[1]), stroke: o.c || "var(--muted)", "stroke-width": o.w || 0.4}, o.dash ? {"stroke-dasharray": o.dash} : {}, o.attrs || {}), g); }
+// aligned dimension between world points p,q offset by `off` (perpendicular, left of p→q)
+function dim(g, svg, p, q, off, label, o = {}) {
+  const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy);
+  if (L < 0.05) return null;
+  const u = [dx / L, dy / L], n = [-u[1], u[0]];
+  const p2 = [p[0] + n[0] * off, p[1] + n[1] * off], q2 = [q[0] + n[0] * off, q[1] + n[1] * off], s = Math.sign(off) || 1, ext = 1.5 * s;
+  const gg = el("g", {}, g);
+  lineW(gg, [p[0] + n[0] * s * 1, p[1] + n[1] * s * 1], [p2[0] + n[0] * ext, p2[1] + n[1] * ext], {w: 0.3});
+  lineW(gg, [q[0] + n[0] * s * 1, q[1] + n[1] * s * 1], [q2[0] + n[0] * ext, q2[1] + n[1] * ext], {w: 0.3});
+  lineW(gg, p2, q2, {w: 0.4, attrs: {"marker-start": `url(#${svg.id}-ar)`, "marker-end": `url(#${svg.id}-ar)`}});
+  let ang = deg(Math.atan2(-u[1], u[0])); if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
+  const fs = o.fs || 5.2, tp = [(p2[0] + q2[0]) / 2 + n[0] * s * (fs * 0.75), (p2[1] + q2[1]) / 2 + n[1] * s * (fs * 0.75)];
+  txt(gg, tp[0], tp[1], label, {fs, a: "middle", rot: ang, w: 600});
+  return gg;
+}
+function angArc(g, svg, c, r, a0, a1, label, o = {}) {
+  const P0 = [c[0] + r * Math.cos(rad(a0)), c[1] + r * Math.sin(rad(a0))], P1 = [c[0] + r * Math.cos(rad(a1)), c[1] + r * Math.sin(rad(a1))];
+  const large = Math.abs(a1 - a0) > 180 ? 1 : 0, sweep = a1 > a0 ? 0 : 1;
+  el("path", {d: `M${F(P0[0])} ${F(-P0[1])} A${F(r)} ${F(r)} 0 ${large} ${sweep} ${F(P1[0])} ${F(-P1[1])}`, fill: "none", stroke: o.c || "var(--muted)", "stroke-width": o.w || 0.45, "marker-end": `url(#${svg.id}-ar)`}, g);
+  const am = (a0 + a1) / 2, rr = r + (o.lr || 7);
+  txt(g, c[0] + rr * Math.cos(rad(am)), c[1] + rr * Math.sin(rad(am)), label, {fs: o.fs || 5.2, a: "middle", w: 600});
+}
+function leader(g, p, q, label, o = {}) {
+  lineW(g, p, q, {w: 0.35, c: "var(--muted)"});
+  el("circle", {cx: F(p[0]), cy: F(-p[1]), r: 0.9, fill: "var(--muted)"}, g);
+  txt(g, q[0] + (o.a === "end" ? -1.5 : 1.5), q[1], label, {fs: o.fs || 5.5, a: o.a || "start", w: o.w || 500});
+}
+
+// =====================================================================  FRONT view (dimensioned)
+const svgF = document.getElementById("front"); defs(svgF, 4);
+const gF = el("g", {}, svgF);
+function drawFront(st) {
+  gF.replaceChildren();
+  const dims = fDims.checked, ghost = fGhost.checked, behind = fBehind.checked, labels = fLabels.checked;
+  // grid + board
+  el("rect", {x: BOARD.x0, y: -BOARD.y1, width: 200, height: 290, fill: "var(--board)", stroke: "var(--boardE)", "stroke-width": 0.8, rx: 1}, gF);
+  for (let x = -100; x <= 100; x += 50) lineW(gF, [x, BOARD.y0], [x, BOARD.y1], {c: "var(--boardE)", w: 0.15, dash: "1 2"});
+  lineW(gF, [-175, 0], [175, 0], {c: "var(--muted)", w: 0.3, dash: "4 2"});
+  lineW(gF, [0, -150], [0, 300], {c: "var(--muted)", w: 0.3, dash: "6 2 1 2"});
+  if (labels) { txt(gF, 152, 3, "pivot line y = 0", {fs: 4.6, fill: "var(--muted)"}); txt(gF, 2, 296, "centre line x = 0", {fs: 4.6, fill: "var(--muted)"}); }
+  // slot (merged) + holes
+  el("rect", {x: -SLOT_W / 2, y: -SLOT2[1], width: SLOT_W, height: SLOT2[1] - SLOT1[0], fill: "var(--hole)", rx: 2.65, opacity: 0.85}, gF);
+  for (const [x, y, d] of [[OX, 0, 8.3], [-OX, 0, 8.3], [XF1, YF, 5.3], [XF0, YF, 5.3], [DEAD[0], DEAD[1], 5.3]]) el("circle", {cx: x, cy: -y, r: d / 2, fill: "var(--hole)"}, gF);
+  // flat bolt heads on the front (Ø10)
+  for (const [x, y] of [[XF1, YF], [XF0, YF], DEAD]) el("circle", {cx: x, cy: -y, r: 5, fill: "none", stroke: "var(--steel)", "stroke-width": 0.6}, gF);
+  // behind
+  if (behind) {
+    const gb = el("g", {opacity: 0.85}, gF);
+    for (const r of carriageRects(st.pin[1])) el("path", {d: pathOf(r), fill: "none", stroke: "var(--car)", "stroke-width": 0.8, "stroke-dasharray": "3 1.5"}, gb);
+    el("path", {d: pathOf(rectXY(-19, -9, st.pin[1] + 35, st.pin[1] + 55)), fill: "none", stroke: "var(--car)", "stroke-width": 0.6, "stroke-dasharray": "1.5 1.5"}, gb);
+    for (const x of [XM1, XM2, XANCH]) lineW(gb, [x, x === XANCH ? YF : YF], [x, x === XANCH ? BOARD.y1 : st.ay], {c: "var(--cord)", w: 0.7, dash: "2 1.5"});
+    lineW(gb, [XM2, DEAD[1]], [XM2, st.ay], {c: "var(--cord)", w: 0.7, dash: "2 1.5"});
+    if (labels) txt(gb, -34, st.pin[1] + 70, "carriage (behind)", {fs: 4.6, fill: "var(--car)", a: "end", w: 600});
+  }
+  // ghosts
+  if (ghost) {
+    for (const s of [0, 300]) {
+      const g0 = state(s);
+      for (const left of [false, true]) {
+        const h = handleShape(g0, left);
+        for (const pc of h.pieces) el("path", {d: pathOf(pc), fill: "none", stroke: "var(--muted)", "stroke-width": 0.35, "stroke-dasharray": "1.2 1.2", opacity: 0.8}, gF);
+        const l = linkShape(g0, left); lineW(gF, l.J, l.Pn, {c: "var(--muted)", w: 0.35, dash: "1.2 1.2"});
+      }
+    }
+  }
+  // parts in stack order (R handle, R link, L link, L handle), grips with their handle
+  const sw = 0.45, ink = "var(--ink)";
+  const hR = handleShape(st, false), hL = handleShape(st, true), lR = linkShape(st, false), lL = linkShape(st, true);
+  const dowel = (h, col) => { const pts = rectAx(h.G, h.ax, DOWEL_L, DOWEL_D); shape(gF, [pts], col, ink, sw, {opacity: 0.92}); };
+  shape(gF, hR.pieces, "var(--R)", ink, sw); holes(gF, hR.holes); dowel(hR, "var(--dowel)");
+  el("circle", {cx: F(OX), cy: 0, r: 6.5, fill: "var(--steel)", stroke: ink, "stroke-width": 0.3}, gF);
+  shape(gF, lR.pieces, "var(--Rl)", ink, sw); holes(gF, lR.holes);
+  shape(gF, lL.pieces, "var(--Ll)", ink, sw); holes(gF, lL.holes);
+  el("circle", {cx: -OX, cy: 0, r: 12, fill: "var(--tube)", stroke: ink, "stroke-width": 0.3}, gF);
+  shape(gF, hL.pieces, "var(--L)", ink, sw); holes(gF, hL.holes); dowel(hL, "var(--dowel)");
+  el("circle", {cx: F(-OX), cy: 0, r: 6.5, fill: "var(--steel)", stroke: ink, "stroke-width": 0.3}, gF);
+  for (const p of [st.J, mir(st.J), st.pin]) el("circle", {cx: F(p[0]), cy: F(-p[1]), r: 4.5, fill: "var(--steel)", stroke: ink, "stroke-width": 0.3}, gF);
+  if (labels) {
+    leader(gF, [OX + 8, 6], [118, 42], "pivot R (M8)", {fs: 5});
+    leader(gF, [-OX - 8, 6], [-104, 42], "pivot L (M8), 20.9 spacer", {fs: 5, a: "end"});
+    leader(gF, st.J, [st.J[0] - 32, st.J[1] + 34], "joint R", {fs: 5, a: "end"});
+    leader(gF, mir(st.J), [-st.J[0] + 32, st.J[1] + 34], "joint L", {fs: 5});
+    leader(gF, st.pin, [36, st.pin[1] + 22], "carriage pin (in slot)", {fs: 5});
+    leader(gF, [hR.G[0] + hR.ax[0] * 50, hR.G[1] + hR.ax[1] * 50], [150, -40], "grip R", {fs: 5});
+    leader(gF, [hL.G[0] + hL.ax[0] * 50, hL.G[1] + hL.ax[1] * 50], [-150, -40], "grip L", {fs: 5, a: "end"});
+  }
+  if (dims) {
+    const gd = el("g", {}, gF);
+    dim(gd, svgF, [-OX, 0], [OX, 0], -44, "P = " + P.toFixed(2));
+    dim(gd, svgF, st.O, st.J, -14, "a = " + A.toFixed(1));
+    dim(gd, svgF, st.J, st.pin, 12, "c = " + C.toFixed(1));
+    dim(gd, svgF, [-hR.G[0], hR.G[1] - 64], [hR.G[0], hR.G[1] - 64], 0.01, "grip spacing " + st.grip.toFixed(1));
+    lineW(gd, hR.G, [hR.G[0], hR.G[1] - 66], {w: 0.3, dash: "1 1"}); lineW(gd, hL.G, [hL.G[0], hL.G[1] - 66], {w: 0.3, dash: "1 1"});
+    dim(gd, svgF, [st.pin[0] + 0, 0], [st.pin[0], st.pin[1]], 0.01, "");
+    txt(gd, 3, st.pin[1] / 2 + 20, "pin y " + st.pin[1].toFixed(1), {fs: 5, rot: -90, a: "middle", w: 600});
+    // included angle between the two grip axes: lines meet on the centre line
+    const t = -hR.G[0] / hR.ax[0], V = [0, hR.G[1] + t * hR.ax[1]];
+    lineW(gd, V, [hR.G[0] - hR.ax[0] * 70, hR.G[1] - hR.ax[1] * 70], {c: "var(--accent)", w: 0.45, dash: "3 1.5"});
+    lineW(gd, V, [hL.G[0] - hL.ax[0] * 70, hL.G[1] - hL.ax[1] * 70], {c: "var(--accent)", w: 0.45, dash: "3 1.5"});
+    const aR = deg(Math.atan2(-hR.ax[1], -hR.ax[0])), aL = deg(Math.atan2(-hL.ax[1], -hL.ax[0]));
+    angArc(gd, svgF, V, 30, aL, aR, st.incl.toFixed(1) + "°", {c: "var(--accent)", lr: 7, fs: 6});
+    // β arc at pivot R
+    angArc(gd, svgF, st.O, 20, 273, 273 + st.b + 0.001, "β " + st.b.toFixed(1) + "°", {lr: 8, fs: 4.6});
+    lineW(gd, st.O, [st.O[0] + 26 * Math.cos(rad(273)), 26 * Math.sin(rad(273))], {w: 0.3, dash: "1 1"});
+  }
+}
+
+// =====================================================================  REAR view (cord)
+const svgR = document.getElementById("rear"); defs(svgR, 3.5);
+const gR0 = el("g", {}, svgR);
+const ROUTE = [
+  ["dead", "Tie the cord at the dead end (−6, 95), z −36."],
+  ["r4", "Run 4: up the near lane x −6 to M2."],
+  ["m2", "Over M2 (x −6): near → far lane."],
+  ["r3", "Run 3: down the far lane x −6 to F1."],
+  ["f1", "Under F1 (−14, 141.7): sideways x −6 → x −22."],
+  ["r2", "Run 2: up the far lane x −22 to M1."],
+  ["m1", "Over M1 (x −22): far → near lane."],
+  ["r1", "Run 1: down the near lane x −22 to F0."],
+  ["f0", "Under F0 (−30, 141.7): sideways x −22 → x −38."],
+  ["anch", "Up the anchor lane x −38, past the notch in the top edge, to the fixed anchor."],
+];
+let routeHL = null;
+function drawRear(st) {
+  gR0.replaceChildren();
+  const mirror = rMirror.checked, labels = rLabels.checked;
+  const g = el("g", {transform: mirror ? "scale(-1 1) translate(-54 0)" : ""}, gR0);
+  const T = (x, y, s, o) => { const t = txt(g, x, y, s, o); if (mirror) { t.setAttribute("transform", `scale(-1 1) translate(${-2 * x} 0)` + (t.getAttribute("transform") || "")); } return t; };
+  el("rect", {x: -100, y: -270, width: 200, height: 290, fill: "var(--board)", stroke: "var(--boardE)", "stroke-width": 0.8, opacity: 0.65}, g);
+  el("rect", {x: -SLOT_W / 2, y: -SLOT2[1], width: SLOT_W, height: SLOT2[1] - SLOT1[0], fill: "var(--hole)", rx: 2.65, opacity: 0.6}, g);
+  el("rect", {x: XANCH - 1.5, y: -270, width: 3, height: 3, fill: "var(--hole)"}, g);
+  for (const [x, y] of [[OX, 0], [-OX, 0]]) el("circle", {cx: x, cy: -y, r: 4.15, fill: "var(--hole)"}, g);
+  // carriage
+  const py = st.pin[1];
+  shape(g, carriageRects(py), "var(--car)", "var(--ink)", 0.35, {opacity: 0.9});
+  el("path", {d: pathOf(rectXY(-19, -9, py + 35, py + 55)), fill: "var(--car)", stroke: "var(--ink)", "stroke-width": 0.5, opacity: 0.55}, g);
+  for (const [x, y, r] of [[0, py, 2.65], [0, py + 60, 2.65], [4, py - 5.5, 2], [4, py + 54.5, 2]]) el("circle", {cx: x, cy: -y, r, fill: "var(--panel)", stroke: "var(--ink)", "stroke-width": 0.3}, g);
+  // band
+  lineW(g, [4, py - 5.5], BAND_SCREW, {c: "var(--band)", w: 1.4});
+  el("circle", {cx: BAND_SCREW[0], cy: -BAND_SCREW[1], r: 3.5, fill: "var(--steel)"}, g);
+  // standoffs (Ø10) and fixed bearings
+  for (const [x, y] of [[XF1, YF], [XF0, YF], DEAD]) el("circle", {cx: x, cy: -y, r: 5, fill: "var(--tube)", stroke: "var(--ink)", "stroke-width": 0.3}, g);
+  const hl = k => routeHL === k;
+  for (const [x, key] of [[XF1, "f1"], [XF0, "f0"]]) {
+    if (key === "f1") el("circle", {cx: x, cy: -YF, r: FL_R, fill: "none", stroke: "var(--muted)", "stroke-width": 0.4, "stroke-dasharray": "1 1"}, g);
+    el("circle", {cx: x, cy: -YF, r: BRG_R, fill: "var(--brg)", stroke: hl(key) ? "var(--cord)" : "var(--ink)", "stroke-width": hl(key) ? 1.4 : 0.4}, g);
+    el("circle", {cx: x, cy: -YF, r: 2.5, fill: "var(--steel)"}, g);
+  }
+  // moving axle + bearings (axle along x, so bearings appear edge-on: 5 wide × 16 tall)
+  const ay = st.ay;
+  el("rect", {x: -32, y: -ay - 2.5, width: 35, height: 5, fill: "var(--steel)", rx: 1}, g);
+  for (const [x, key] of [[XM1, "m1"], [XM2, "m2"]]) {
+    el("rect", {x: x - 3.5, y: -ay - FL_R, width: 7, height: 2 * FL_R, fill: "var(--tube)", rx: 0.6}, g);
+    el("rect", {x: x - 2.5, y: -ay - BRG_R, width: 5, height: 2 * BRG_R, fill: "var(--brg)", stroke: hl(key) ? "var(--cord)" : "var(--ink)", "stroke-width": hl(key) ? 1.4 : 0.4, rx: 0.8}, g);
+  }
+  // cord runs
+  const run = (key, x, y0, y1, far) => lineW(g, [x, y0], [x, y1], {c: "var(--cord)", w: hl(key) ? 2.4 : 1.1, dash: far ? "3 1.6" : null});
+  run("r4", XM2 - 0.9, DEAD[1], ay, false);         // near lane at x −6 (drawn just left of the far one)
+  run("r3", XM2 + 0.9, YF, ay, true);
+  run("r2", XM1 + 0.9, YF, ay, true);
+  run("r1", XM1 - 0.9, YF, ay, false);
+  run("anch", XANCH, YF, BOARD.y1 + 28, false);
+  el("path", {d: `M${XANCH - 3} ${-(BOARD.y1 + 24)} L${XANCH} ${-(BOARD.y1 + 31)} L${XANCH + 3} ${-(BOARD.y1 + 24)}`, fill: "none", stroke: "var(--cord)", "stroke-width": 1}, g);
+  // wraps under F1, F0
+  for (const [x, key, far] of [[XF1, "f1", true], [XF0, "f0", false]]) el("path", {d: `M${x + 8} ${-YF} A8 8 0 0 1 ${x - 8} ${-YF}`, fill: "none", stroke: "var(--cord)", "stroke-width": hl(key) ? 2.4 : 1.1, "stroke-dasharray": far ? "3 1.6" : null}, g);
+  el("circle", {cx: DEAD[0], cy: -DEAD[1], r: 2.4, fill: "var(--cord)", stroke: hl("dead") ? "var(--ink)" : "none", "stroke-width": 0.8}, g);
+  // payout tag above the board
+  if (labels) {
+    T(XANCH + 4, BOARD.y1 + 22, "to fixed anchor: payout " + st.s.toFixed(0) + " mm", {fs: 5.2, w: 600, fill: "var(--cord)"});
+    const L = (p, q, s, a) => { lineW(g, p, q, {w: 0.3}); T(q[0] + (a === "end" ? -1.5 : 1.5), q[1], s, {fs: 5, a: a || "start"}); };
+    L([XM2 + 3, ay - 4], [40, ay - 8], "M2 (x −6)");
+    L([XM1 - 3, ay + 4], [-62, ay + 28], "M1 (x −22)", "end");
+    L([XF1 + 6, YF - 5], [40, YF - 14], "F1 (−14, 141.7) far lane");
+    L([XF0 - 6, YF - 5], [-62, YF - 14], "F0 (−30, 141.7)", "end");
+    L([DEAD[0] + 2, DEAD[1]], [40, DEAD[1] - 6], "dead end (−6, 95)");
+    L([BAND_SCREW[0] + 3, BAND_SCREW[1]], [40, 250], "band screw (20, 262)");
+    L([8, py + 20], [40, py + 20], "carriage plate");
+    L([-14, py + 45], [-62, py + 42], "post + axle (z −44)", "end");
+    L([0, st.gy], [40, st.gy + 12], "guide bolt in slot");
+    L([0, py], [40, py - 6], "carriage pin in slot");
+    for (const [x, y, n] of [[-29, YF + 15, "1"], [-15, YF + 15, "2"], [1, YF + 15, "3"], [-12, (DEAD[1] + YF) / 2, "4"]]) {
+      el("circle", {cx: x, cy: -y, r: 3.4, fill: "var(--panel)", stroke: "var(--cord)", "stroke-width": 0.6}, g);
+      T(x, y, n, {fs: 4.4, a: "middle", w: 700});
+    }
+    // carriage travel dimension
+    dim(g, svgR, [128, st.pin[1]], [128, Y0], 0.01, "");
+    T(124, (st.pin[1] + Y0) / 2, "carriage ↓ " + st.t.toFixed(1), {fs: 4.6, rot: -90, a: "middle", w: 600});
+  }
+}
+
+// =====================================================================  SIDE (z stack)
+const svgS = document.getElementById("side"); defs(svgS, 3.5);
+const gS0 = el("g", {}, svgS);
+function yRange(pieces) { let lo = 1e9, hi = -1e9; for (const pc of pieces) for (const p of pc) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); } return [lo, hi]; }
+function drawSide(st) {
+  gS0.replaceChildren();
+  const g = el("g", {}, gS0), R = (z0, z1, y0, y1, fill, o = {}) => el("rect", Object.assign({x: F(Math.min(z0, z1)), y: F(-Math.max(y0, y1)), width: F(Math.abs(z1 - z0)), height: F(Math.abs(y1 - y0)), fill, stroke: "var(--ink)", "stroke-width": 0.3}, o), g);
+  // z ruler
+  for (const z of [-52, -44, -36, -20, -12, 0, 8.3, 14.6, 20.9, 28.9]) { lineW(g, [z, -150], [z, 290], {c: "var(--grid)", w: 0.3}); txt(g, z, -154, String(z).replace("-", "−"), {fs: 4.2, a: "end", fill: "var(--muted)", rot: -90}); }
+  txt(g, -12, -180, "z [mm] → front", {fs: 4.6, a: "start", fill: "var(--muted)"});
+  R(BOARD.z0, BOARD.z1, BOARD.y0, BOARD.y1, "var(--board)");
+  // front stack (y extents of each plate)
+  const hR = handleShape(st, false), hL = handleShape(st, true), lR = linkShape(st, false), lL = linkShape(st, true);
+  const yr = (pcs) => yRange(pcs);
+  let [a, b] = yr(hR.pieces); R(...Z.hR, a, b, "var(--R)", {opacity: 0.9});
+  [a, b] = yr(lR.pieces); R(...Z.lR, a, b, "var(--Rl)", {opacity: 0.9});
+  [a, b] = yr(lL.pieces); R(...Z.lL, a, b, "var(--Ll)", {opacity: 0.9});
+  [a, b] = yr(hL.pieces); R(...Z.hL, a, b, "var(--L)", {opacity: 0.9});
+  R(0, 20.9, -12, 12, "var(--tube)", {opacity: 0.85});          // left spacer (behind handle R's hub in this view)
+  R(0, 8.3, st.pin[1] - 5, st.pin[1] + 5, "var(--tube)");
+  // dowels (axis tilted in x-y, so their y extent is the projection)
+  for (const [h, z] of [[hR, 8], [hL, 28.9]]) { const ys = [h.G[1] + h.ax[1] * 65, h.G[1] - h.ax[1] * 65]; const ext = 10 * Math.abs(h.ax[0]); R(z, z + 20, Math.min(...ys) - ext, Math.max(...ys) + ext, "var(--dowel)", {opacity: 0.85}); }
+  // bolts
+  for (const [y, z0, z1] of [[st.pin[1], -23.5, 27], [st.gy, -23.5, 6], [0, -20.5, 37]]) R(z0, z1, y - 2.5, y + 2.5, "var(--steel)", {opacity: 0.75});
+  // behind: carriage plate + post
+  const py = st.pin[1];
+  R(...Z.plate, py - 10, py + 65, "var(--car)", {opacity: 0.9});
+  R(...Z.post, py + 35, py + 55, "var(--car)", {opacity: 0.9});
+  // standoffs, fixed bearings
+  R(-49.5, -12, YF - 5, YF + 5, "var(--tube)"); R(-55.5, -50.5, YF - 8, YF + 8, "var(--brg)"); R(-56.5, -55.5, YF - 10, YF + 10, "var(--tube)"); R(-50.5, -49.5, YF - 10, YF + 10, "var(--tube)");
+  R(-33.5, -12, YF - 5, YF + 5, "var(--tube)", {opacity: 0.8}); R(-39.5, -34.5, YF - 8, YF + 8, "var(--brg)", {opacity: 0.85});
+  R(-35, -12, DEAD[1] - 5, DEAD[1] + 5, "var(--tube)");
+  // moving bearing (seen side-on: circle in y-z)
+  el("circle", {cx: Z.axle, cy: F(-st.ay), r: FL_R, fill: "var(--tube)", stroke: "var(--ink)", "stroke-width": 0.3}, g);
+  el("circle", {cx: Z.axle, cy: F(-st.ay), r: BRG_R, fill: "var(--brg)", stroke: "var(--ink)", "stroke-width": 0.3}, g);
+  el("circle", {cx: Z.axle, cy: F(-st.ay), r: 2.5, fill: "var(--steel)"}, g);
+  // cord lanes
+  lineW(g, [Z.near, DEAD[1]], [Z.near, st.ay], {c: "var(--cord)", w: 1.1});
+  lineW(g, [Z.far, YF - 8], [Z.far, st.ay], {c: "var(--cord)", w: 1.1, dash: "3 1.6"});
+  el("path", {d: `M${Z.near} ${F(-st.ay)} A8 8 0 0 0 ${Z.far} ${F(-st.ay)}`, fill: "none", stroke: "var(--cord)", "stroke-width": 1.1}, g);
+  lineW(g, [Z.near, YF], [Z.near, BOARD.y1 + 25], {c: "var(--cord)", w: 1.1});
+  // labels
+  const L = (p, q, s, a) => leader(g, p, q, s, {fs: 4.8, a});
+  L([4, -60], [60, -112], "handle R z 0–8");
+  L([11.3, 60], [60, 40], "link R z 8.3–14.3");
+  L([17.6, 120], [60, 110], "link L z 14.6–20.6");
+  L([24.9, 70], [60, 80], "handle L z 20.9–28.9");
+  L([10, 4], [60, 15], "L spacer 20.9 (at x −49)");
+  L([4, py], [60, py + 12], "pin spacer 8.3");
+  L([18, -100], [60, -135], "grips (dowels)");
+  L([-6, 250], [60, 262], "board z −12…0");
+  L([-16, py + 55], [-70, py + 75], "carriage plate z −20…−12", "end");
+  L([-30, py + 40], [-70, py + 52], "post to z −52", "end");
+  L([Z.axle, st.ay - 9], [-70, st.ay - 20], "M1/M2 axle z −44", "end");
+  L([-53, YF - 4], [-70, YF - 26], "F1 bearing (1 mm behind lane)", "end");
+  L([-37, YF + 6], [-70, YF + 22], "F0 bearing", "end");
+  L([-30, YF - 2], [-70, YF - 42], "standoffs 37.5 / 21.5", "end");
+  L([-24, DEAD[1]], [-70, DEAD[1] - 10], "dead-end standoff 23", "end");
+  txt(g, Z.near, BOARD.y1 + 30, "near −36", {fs: 4.4, a: "middle", fill: "var(--cord)", w: 600});
+  txt(g, Z.far, st.ay + 16, "far −52", {fs: 4.4, a: "middle", fill: "var(--cord)", w: 600});
+}
+
+// =====================================================================  PLOTS
+const XS = Array.from({length: 301}, (_, i) => i), STS = XS.map(s => state(s));
+function plot(svg, key, yLo, yHi, ticks, fmt, guide) {
+  const W = 560, H = 300, m = {l: 46, r: 14, t: 12, b: 36}, pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const X = s => m.l + s / 300 * pw, Y = v => m.t + (1 - (v - yLo) / (yHi - yLo)) * ph;
+  svg.replaceChildren();
+  const g = el("g", {}, svg);
+  for (const v of ticks) { el("line", {x1: m.l, x2: m.l + pw, y1: Y(v), y2: Y(v), stroke: "var(--grid)", "stroke-width": 1}, g); el("text", {x: m.l - 6, y: Y(v), "font-size": 11, "text-anchor": "end", "dominant-baseline": "middle", fill: "var(--muted)"}, g, fmt(v)); }
+  for (let s = 0; s <= 300; s += 60) { el("line", {x1: X(s), x2: X(s), y1: m.t + ph, y2: m.t + ph + 4, stroke: "var(--muted)"}, g); el("text", {x: X(s), y: m.t + ph + 16, "font-size": 11, "text-anchor": "middle", fill: "var(--muted)"}, g, s); }
+  el("text", {x: m.l + pw / 2, y: H - 4, "font-size": 11.5, "text-anchor": "middle", fill: "var(--muted)"}, g, "cord payout = attachment travel [mm]");
+  el("line", {x1: m.l, x2: m.l + pw, y1: m.t + ph, y2: m.t + ph, stroke: "var(--muted)"}, g);
+  guide(g, X, Y);
+  el("path", {d: "M" + STS.map((st, i) => X(i).toFixed(1) + " " + Y(st[key]).toFixed(1)).join(" L"), fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-linejoin": "round"}, g);
+  const cross = el("line", {y1: m.t, y2: m.t + ph, stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "3 3", opacity: 0}, g);
+  const dot = el("circle", {r: 5, fill: "var(--accent)", stroke: "var(--panel)", "stroke-width": 2}, g);
+  const hov = el("circle", {r: 4.5, fill: "var(--panel)", stroke: "var(--accent)", "stroke-width": 2, opacity: 0}, g);
+  const hit = el("rect", {x: m.l, y: m.t, width: pw, height: ph, fill: "transparent", style: "cursor:crosshair"}, g);
+  const sOf = e => { const r = svg.getBoundingClientRect(); return Math.max(0, Math.min(300, Math.round(((e.clientX - r.left) / r.width * W - m.l) / pw * 300))); };
+  hit.addEventListener("pointermove", e => {
+    const s = sOf(e), st = STS[s];
+    cross.setAttribute("x1", X(s)); cross.setAttribute("x2", X(s)); cross.setAttribute("opacity", 1);
+    hov.setAttribute("cx", X(s)); hov.setAttribute("cy", Y(st[key])); hov.setAttribute("opacity", 1);
+    tip.style.display = "block"; tip.style.left = (e.clientX + 14) + "px"; tip.style.top = (e.clientY + 12) + "px";
+    tip.innerHTML = `<b>${s} mm</b> payout<br>carriage ${st.t.toFixed(1)} mm · β ${st.b.toFixed(2)}°<br>included <b>${st.incl.toFixed(2)}°</b> (linear ${(50 + s / 5).toFixed(1)}°)<br>deviation ${st.dev >= 0 ? "+" : ""}${st.dev.toFixed(2)}°`;
+  });
+  hit.addEventListener("pointerleave", () => { cross.setAttribute("opacity", 0); hov.setAttribute("opacity", 0); tip.style.display = "none"; });
+  hit.addEventListener("click", e => setS(sOf(e)));
+  return st => { dot.setAttribute("cx", X(Math.min(st.s, 300))); dot.setAttribute("cy", Y(st[key])); };
+}
+const tip = document.getElementById("tip");
+let plotA, plotD;
+function buildPlots() {
+  plotA = plot(document.getElementById("plotA"), "incl", 45, 115, [50, 60, 70, 80, 90, 100, 110], v => v + "°",
+    (g, X, Y) => el("line", {x1: X(0), y1: Y(50), x2: X(300), y2: Y(110), stroke: "var(--muted)", "stroke-width": 1.5, "stroke-dasharray": "6 4"}, g));
+  plotD = plot(document.getElementById("plotD"), "dev", -1.8, 1.8, [-1.5, -1, -0.5, 0, 0.5, 1, 1.5], v => (v > 0 ? "+" : "") + v.toFixed(1) + "°",
+    (g, X, Y) => { for (const v of [1.5, -1.5]) el("line", {x1: X(0), y1: Y(v), x2: X(300), y2: Y(v), stroke: "var(--muted)", "stroke-width": 1.5, "stroke-dasharray": "6 4"}, g);
+      const mx = STS.reduce((a, b) => (Math.abs(b.dev) > Math.abs(a.dev) ? b : a));
+      el("text", {x: X(mx.s) + 8, y: Y(mx.dev) - 10, "font-size": 11, fill: "var(--ink)"}, g, `max +${mx.dev.toFixed(2)}° at ${mx.s} mm (${(Math.abs(mx.dev) / 60 * 100).toFixed(1)} %)`); });
+}
+
+// =====================================================================  reference table
+const REF = [[0, 0, 0.00, 50.0, 195.8, "(−44.3, 84.2)"], [15, 60, 6.45, 62.9, 180.8, "(−53.2, 73.2)"], [30, 120, 12.49, 75.0, 165.8, "(−60.3, 62.0)"],
+             [45, 180, 18.32, 86.6, 150.8, "(−66.0, 50.6)"], [60, 240, 24.10, 98.2, 135.8, "(−70.5, 38.7)"], [75, 300, 29.99, 110.0, 120.8, "(−73.9, 26.2)"]];
+const reftab = document.getElementById("reftab");
+function drawRef(st) {
+  const near = Math.round(st.s / 60);
+  let h = "<tr><th>carriage travel</th><th>cord payout</th><th>β</th><th>included</th><th>pin y</th><th>joint R (x, y)</th></tr>";
+  REF.forEach((r, i) => { h += `<tr class="${i === near ? "hl" : ""}" data-s="${r[1]}" style="cursor:pointer"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2].toFixed(2)}°</td><td>${r[3].toFixed(1)}°</td><td>${r[4].toFixed(1)}</td><td>${r[5]}</td></tr>`; });
+  const jx = st.J[0] - OX, jj = st.J;
+  h += `<tr class="live"><td>${st.t.toFixed(1)}</td><td>${st.s.toFixed(0)}</td><td>${st.b.toFixed(2)}°</td><td>${st.incl.toFixed(1)}°</td><td>${st.pin[1].toFixed(1)}</td><td>(${jj[0].toFixed(1)}, ${jj[1].toFixed(1)}) live</td></tr>`;
+  reftab.innerHTML = h;
+}
+reftab.addEventListener("click", e => { const tr = e.target.closest("tr[data-s]"); if (tr) setS(+tr.dataset.s); });
+
+// =====================================================================  PART drawings (static, to scale)
+function drawParts() {
+  // P1 handle, handle frame (origin pivot), β = 0
+  const sv = document.getElementById("pHandle"); sv.replaceChildren(); defs(sv, 3.5);
+  const g = el("g", {}, sv), st = state(0);
+  const sh = handleShape(st, false), off = p => [p[0] - OX, p[1]];
+  const pcs = sh.pieces.map(pc => pc.map(off)), J = off(sh.J), G = off(sh.G), ax = sh.ax;
+  lineW(g, [-125, 0], [70, 0], {w: 0.25, dash: "3 1.5"}); lineW(g, [0, -105], [0, 100], {w: 0.25, dash: "3 1.5"});
+  shape(g, pcs, "var(--R)", "var(--ink)", 0.4);
+  holes(g, sh.holes.map(([c, r]) => [off(c), r]));
+  el("circle", {cx: F(J[0]), cy: F(-J[1]), r: 5.5, fill: "none", stroke: "var(--ink)", "stroke-width": 0.3, "stroke-dasharray": "1 0.8"}, g);
+  dim(g, sv, [0, 0], J, 10, "125.9");
+  dim(g, sv, [0, 0], G, 12, "71.09");
+  angArc(g, sv, [0, 0], 24, 0, 138, "138°", {lr: 6, fs: 5});
+  angArc(g, sv, [0, 0], 34, 0, -87, "273° (−87°)", {lr: 4, fs: 5});
+  leader(g, [8, 6], [26, 30], "hub R12, bore Ø8.3", {fs: 4.8});
+  leader(g, [J[0] + 3, J[1] + 6], [J[0] + 18, J[1] + 15], "boss R8, Ø5.3, csk Ø11 × 90° back face", {fs: 4.6});
+  leader(g, [G[0] + ax[0] * 20 + 2, G[1] + ax[1] * 20], [40, -58], "pad 24 × 60, 25° from vertical", {fs: 4.6});
+  leader(g, [G[0] - ax[0] * 20 + 2, G[1] - ax[1] * 20], [40, -72], "2 × Ø4.3 at ±20 on the axis", {fs: 4.6});
+  lineW(g, [G[0] - ax[0] * 40, G[1] - ax[1] * 40], [G[0] + ax[0] * 44, G[1] + ax[1] * 44], {w: 0.3, dash: "4 1 1 1"});
+  lineW(g, G, [G[0], G[1] + 44], {w: 0.25, dash: "1 1"}); angArc(g, sv, G, 36, 90, 115, "25°", {lr: 6, fs: 4.6});
+  txt(g, -120, -100, "arm width 16 · plate 8 thick · inside fillets R5", {fs: 4.8, fill: "var(--muted)"});
+  txt(g, -120, -108, "RIGHT handle, seen from the front, β = 0 (closed)", {fs: 5, w: 600});
+
+  // P2 link
+  const sl = document.getElementById("pLink"); sl.replaceChildren(); defs(sl, 3);
+  const gl = el("g", {}, sl);
+  shape(gl, [bar([0, 0], [120, 0], 12), circ([0, 0], 8), circ([120, 0], 8)], "var(--Rl)", "var(--ink)", 0.4);
+  holes(gl, [[[0, 0], 2.65], [[120, 0], 2.65]]);
+  dim(gl, sl, [0, 0], [120, 0], -14, "120.0 c–c", {fs: 4.6});
+  dim(gl, sl, [60, -6], [60, 6], -10, "12", {fs: 4});
+  leader(gl, [5, 6], [16, 14], "R8 boss, Ø5.3 (both ends)", {fs: 4.3});
+  txt(gl, 137, 0, "6 thick", {fs: 4.4, fill: "var(--muted)"});
+
+  // P3 carriage, front view (carriage frame) + side view
+  const sc = document.getElementById("pCarriage"); sc.replaceChildren(); defs(sc, 3);
+  const gc = el("g", {}, sc);
+  lineW(gc, [-40, 0], [14, 0], {w: 0.2, dash: "2 1"});
+  shape(gc, [rectXY(-4, 8, -10, 65), rectXY(-32, 8, 55, 65)], "var(--car)", "var(--ink)", 0.35);
+  el("path", {d: pathOf(rectXY(-19, -9, 35, 55)), fill: `url(#pCarriage-hatch)`, stroke: "var(--ink)", "stroke-width": 0.35, "stroke-dasharray": "1.2 0.8"}, gc);
+  holes(gc, [[[0, 0], 2.65], [[0, 60], 2.65], [[4, -5.5], 2], [[4, 54.5], 2]]);
+  lineW(gc, [-22, 45], [-6, 45], {w: 0.3, dash: "3 1 1 1"});
+  dim(gc, sc, [-32, 65], [8, 65], 7, "40", {fs: 3.8}); dim(gc, sc, [8, -10], [8, 65], -8, "75", {fs: 3.8});
+  dim(gc, sc, [-4, -10], [8, -10], -6, "12", {fs: 3.6}); dim(gc, sc, [-32, 55], [-32, 65], 7, "10", {fs: 3.4});
+  leader(gc, [0, 0], [-30, 12], "pin Ø5.3 (0,0)", {fs: 3.8, a: "end"});
+  leader(gc, [0, 60], [-30, 74], "guide Ø5.3 (0,60)", {fs: 3.8, a: "end"});
+  leader(gc, [-14, 40], [-40, 30], "post (hatched)", {fs: 3.8, a: "end"});
+  leader(gc, [4, -5.5], [-30, -8], "band hook Ø4 (use this)", {fs: 3.8, a: "end"});
+  txt(gc, -60, -22, "FRONT (carriage frame, origin = pin)", {fs: 4.2, w: 600});
+  // side view: z to the right (board side on the right)
+  const gs = el("g", {transform: "translate(62 0)"}, gc);
+  el("path", {d: pathOf(rectXY(32, 40, -10, 65)), fill: "var(--car)", stroke: "var(--ink)", "stroke-width": 0.35}, gs);
+  el("path", {d: pathOf(rectXY(0, 32, 35, 55)), fill: "var(--car)", stroke: "var(--ink)", "stroke-width": 0.35}, gs);
+  el("circle", {cx: 8, cy: -45, r: 2.65, fill: "var(--panel)", stroke: "var(--ink)", "stroke-width": 0.3}, gs);
+  dim(gs, sc, [0, 55], [32, 55], 8, "32", {fs: 3.6}); dim(gs, sc, [32, 65], [40, 65], 4, "8", {fs: 3.4});
+  dim(gs, sc, [8, 45], [32, 45], -12, "24", {fs: 3.4});
+  txt(gs, 0, -22, "SIDE (board → right)", {fs: 4.2, w: 600});
+  txt(gs, -2, 25, "axle Ø5.3", {fs: 3.4, fill: "var(--muted)"}); txt(gs, -2, 20, "along x, z −44", {fs: 3.4, fill: "var(--muted)"});
+
+  // P4 tubes
+  const stb = document.getElementById("pTubes"); stb.replaceChildren(); defs(stb, 2.5);
+  const gt = el("g", {}, stb);
+  let x = 0;
+  for (const [L, OD, bore, name] of [[20.9, 24, 8.3, "P4a"], [8.3, 10, 5.3, "P4b"], [37.5, 10, 5.3, "P4c F1"], [21.5, 10, 5.3, "P4d F0"], [23.0, 10, 5.3, "P4e dead end"]]) {
+    const cx = x + OD / 2 + 4;
+    el("rect", {x: cx - OD / 2, y: -L, width: OD, height: L, fill: "var(--tube)", stroke: "var(--ink)", "stroke-width": 0.35}, gt);
+    el("rect", {x: cx - bore / 2, y: -L, width: bore, height: L, fill: "none", stroke: "var(--ink)", "stroke-width": 0.25, "stroke-dasharray": "1 0.8"}, gt);
+    txt(gt, cx, -5, name, {fs: 5, a: "middle", w: 600}); txt(gt, cx, -11.5, `${L} × Ø${OD}`, {fs: 4.4, a: "middle", fill: "var(--muted)"});
+    x += Math.max(OD, 30) + 20;
+  }
+
+  // P5 flange + bearing (section)
+  for (const [id, OD, bore, wdt, col, name] of [["pFlange", 20, 5.3, 1, "var(--tube)", "Ø20 × 1, bore Ø5.3"], ["pBrg", 16, 5, 5, "var(--brg)", "625ZZ: Ø16 × 5, bore Ø5"]]) {
+    const s = document.getElementById(id); s.replaceChildren(); defs(s, 2.5); const gg = el("g", {}, s);
+    el("circle", {cx: 0, cy: 0, r: OD / 2, fill: col, stroke: "var(--ink)", "stroke-width": 0.3}, gg);
+    if (id === "pBrg") el("circle", {cx: 0, cy: 0, r: 5.6, fill: "none", stroke: "var(--ink)", "stroke-width": 0.25}, gg);
+    el("circle", {cx: 0, cy: 0, r: bore / 2, fill: "var(--panel)", stroke: "var(--ink)", "stroke-width": 0.3}, gg);
+    el("rect", {x: 22, y: -OD / 2, width: wdt, height: OD, fill: col, stroke: "var(--ink)", "stroke-width": 0.3}, gg);
+    txt(gg, 32, 3, name, {fs: 4.4, w: 600}); txt(gg, 32, -3, id === "pBrg" ? "cord rides on the outer ring" : "one on each side of each bearing", {fs: 3.8, fill: "var(--muted)"});
+  }
+}
+
+// =====================================================================  BOARD drawing + hole table
+function drawBoard() {
+  const sv = document.getElementById("board"); sv.replaceChildren(); defs(sv, 3);
+  const g = el("g", {}, sv);
+  el("rect", {x: -100, y: -270, width: 200, height: 290, fill: "var(--board)", stroke: "var(--boardE)", "stroke-width": 0.8}, g);
+  lineW(g, [-100, 0], [100, 0], {w: 0.25, dash: "4 2"}); lineW(g, [0, -20], [0, 270], {w: 0.25, dash: "6 2 1 2"});
+  el("rect", {x: -SLOT_W / 2, y: -SLOT2[1], width: SLOT_W, height: SLOT2[1] - SLOT1[0], fill: "var(--hole)", rx: 2.65}, g);
+  el("rect", {x: XANCH - 1.5, y: -270, width: 3, height: 3, fill: "var(--hole)"}, g);
+  const H = [[OX, 0, 8.3, "pivot R Ø8.3 (49.28, 0)", 1], [-OX, 0, 8.3, "pivot L Ø8.3 (−49.28, 0)", -1], [XF1, YF, 5.3, "F1 Ø5.3 (−14, 141.7)", 1], [XF0, YF, 5.3, "F0 Ø5.3 (−30, 141.7)", -1],
+             [DEAD[0], DEAD[1], 5.3, "dead end Ø5.3 (−6, 95)", 1], [BAND_SCREW[0], BAND_SCREW[1], 3, "band screw, back face (20, 262)", 1]];
+  for (const [x, y, d, name, side] of H) {
+    el("circle", {cx: x, cy: -y, r: d / 2, fill: "var(--hole)"}, g);
+    lineW(g, [x - 5, y], [x + 5, y], {w: 0.25}); lineW(g, [x, y - 5], [x, y + 5], {w: 0.25});
+    leader(g, [x + side * 3, y + 2], [side > 0 ? 108 : -108, y + (name.startsWith("F1") ? 8 : name.startsWith("F0") ? -8 : 10)], name, {fs: 4.8, a: side > 0 ? "start" : "end"});
+  }
+  dim(g, sv, [-2.65, SLOT1[0]], [-2.65, SLOT2[1]], 14, "141.3 (one slot, 5.3 wide)", {fs: 4.6});
+  for (const [y0, y1, nm, o] of [[SLOT1[0], SLOT1[1], "slot 1 range 81.3", -26], [SLOT2[0], SLOT2[1], "slot 2 range 81.3", -40]]) dim(g, sv, [2.65, y0], [2.65, y1], o, nm, {fs: 4});
+  leader(g, [XANCH, 268], [-108, 282], "anchor notch x −38, 3 deep", {fs: 4.8, a: "end"});
+  dim(g, sv, [-100, -20], [100, -20], 10, "200", {fs: 5}); dim(g, sv, [100, -20], [100, 270], -10, "290", {fs: 5});
+  txt(g, -100, -33, "front face (handle side); bottom edge y = −20, top edge y = 270", {fs: 4.6, fill: "var(--muted)"});
+  const tb = document.getElementById("holetab");
+  tb.innerHTML = "<tr><th>Feature</th><th>Position (x, y)</th><th>Size</th></tr>" + [
+    ["Pivot R / L", "(±49.28, 0)", "Ø8.3 through"], ["Slot (1 + 2 merged)", "x 0, y 117.6 … 258.9", "5.3 wide, 141.3 long"],
+    ["…slot 1 (carriage pin)", "y 117.6 … 198.9", "pin travels 195.8 → 120.8"], ["…slot 2 (guide bolt)", "y 177.6 … 258.9", "bolt travels 255.8 → 180.8"],
+    ["F1 bolt", "(−14, 141.7)", "Ø5.3"], ["F0 bolt", "(−30, 141.7)", "Ø5.3"], ["Dead-end bolt", "(−6, 95)", "Ø5.3"],
+    ["Band screw", "(+20, 262)", "wood screw, back face"], ["Anchor-cord notch", "top edge, x −38", "3 mm deep"]].map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("") +
+    `<tr><td colspan="3" class="note">Drill Ø5.5 / Ø8.5. For the slot, drill a row of Ø5.5 holes and file to 5.3 wide (buy_list).</td></tr>`;
+}
+
+// =====================================================================  FASTENERS
+function drawFasteners() {
+  const host = document.getElementById("fasteners");
+  const C = {head: "var(--steel)", nut: "var(--steel)", w: "var(--line)", board: "var(--board)", car: "var(--car)", tube: "var(--tube)", R: "var(--R)", Rl: "var(--Rl)", L: "var(--L)", Ll: "var(--Ll)", brg: "var(--brg)"};
+  const list = [
+    ["Carriage pin bolt: M5 × 50, flat/button head", "from the back", [["head", "head"], ["car", "carriage plate", 8], ["board", "board (slot)", 12], ["tube", "spacer P4b", 8.3], ["Rl", "link R", 6], ["w", "washer"], ["Ll", "link L", 6], ["nut", "nut"]]],
+    ["Guide bolt: M5 × 30", "loose enough to slide", [["head", "head"], ["car", "carriage plate", 8], ["board", "board (slot)", 12], ["w", "washer"], ["nut", "nut"]]],
+    ["Pivot R: M8 × 35, hex", "tighten only until the handle swings freely", [["head", "head"], ["w", "washer"], ["board", "board", 12], ["R", "handle R", 8], ["w", "washer"], ["nut", "nut"]]],
+    ["Pivot L: M8 × 50, hex", "", [["head", "head"], ["w", "washer"], ["board", "board", 12], ["tube", "spacer P4a", 20.9], ["L", "handle L", 8], ["w", "washer"], ["nut", "nut"]]],
+    ["Joint pin R: M5 × 25 countersunk", "head flush in the handle's countersink", [["R", "handle R (csk)", 8], ["w", "washer"], ["Rl", "link R", 6], ["nut", "nut"]]],
+    ["Joint pin L: M5 × 25 countersunk", "handle L is turned over, so its countersink faces forward", [["L", "handle L (csk)", 8], ["w", "washer"], ["Ll", "link L", 6], ["nut", "nut"]]],
+    ["Carriage axle: M5 × 35 (along x)", "§8a: leave out the two plain washers beside the post", [["nut", "nut"], ["tube", "flange", 1], ["brg", "M1", 5], ["tube", "flange", 1], ["w", "washer?"], ["car", "post", 10], ["w", "washer?"], ["tube", "flange", 1], ["brg", "M2", 5], ["tube", "flange", 1], ["nut", "nut"]]],
+    ["F1: M5 × 70, flat head", "head on the front face", [["head", "flat head"], ["board", "board", 12], ["tube", "standoff P4c", 37.5], ["tube", "flange", 1], ["brg", "F1", 5], ["tube", "flange", 1], ["nut", "nut"]]],
+    ["F0: M5 × 50, flat head", "", [["head", "flat head"], ["board", "board", 12], ["tube", "standoff P4d", 21.5], ["tube", "flange", 1], ["brg", "F0", 5], ["tube", "flange", 1], ["nut", "nut"]]],
+    ["Dead end: M5 × 45, flat head", "tie the cord above the nut", [["head", "flat head"], ["board", "board", 12], ["tube", "standoff P4e", 23], ["nut", "nut"]]],
+  ];
+  host.innerHTML = list.map(([t, n, items]) => `<div class="fast"><h3>${t}</h3>${n ? `<p class="note">${n}</p>` : ""}<div class="stack">` +
+    items.map(([c, name, mm]) => `<div class="chipz" style="background:color-mix(in srgb, ${C[c]} ${c === "w" || c === "head" || c === "nut" ? 40 : 55}%, var(--panel));${mm ? `flex:0 0 ${Math.max(58, mm * 5)}px` : "flex:0 0 52px"}">${name}${mm ? `<small>${mm}</small>` : ""}</div>`).join("") + "</div></div>").join("");
+}
+
+// =====================================================================  PARAM tables + route list + layers
+function staticTables() {
+  document.getElementById("ptab").innerHTML = "<tr><th>Name</th><th>Value</th><th>Note</th></tr>" + [
+    ["S_CLOSED", "106 mm", "grip-centre spacing at closed"], ["DELTA_S", "70 mm", "spacing change closed → open"], ["THETA_C", "3°", "pivot→grip line from vertical at closed"],
+    ["BETA_MAX", "30°", "handle rotation"], ["N_REEVE", "4", "cord parts"], ["STROKE", "300 mm", "travel for full opening"], ["ARM_A", "125.9 mm", "drive arm, pivot → joint"],
+    ["LINK_C", "120.0 mm", "joint → carriage pin"], ["PSI0", "42°", "drive arm above the inward horizontal at closed"], ["HUB_R", "12 mm", "pivot hub radius"],
+    ["PIVOT_D / PIN_D", "8 / 5 mm", "M8 pivots, M5 everything else"], ["PLATE_T", "8 mm", "handles and carriage"], ["LINK_T / LINK_W", "6 / 12 mm", ""], ["ARM_W", "16 mm", ""],
+    ["BOSS_R", "8 mm", "joint bosses"], ["BRG", "625ZZ 5×16×5", "used directly as pulleys"], ["FLANGE_D", "20 mm × 1", "printed"], ["BOARD", "200 × 290 × 12", "bottom edge y = −20"],
+    ["CLEAR_PIN", "0.3 mm", "pin holes = pin + 0.3"], ["GAP", "0.3 mm", "between stacked plates"]].map(r => `<tr><td><code>${r[0]}</code></td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("");
+  const jc = joint(0);
+  document.getElementById("dtab").innerHTML = "<tr><th>Name</th><th>Equation</th><th>Value</th></tr>" + [
+    ["L_LINE", "ΔS / (2 (sin(θc+βmax) − sin θc))", LL.toFixed(2) + " mm"], ["P", "S_CLOSED − 2 L_LINE sin θc", P.toFixed(2) + " mm"], ["PIVOT_X", "P / 2", OX.toFixed(2) + " mm"],
+    ["JOINT closed (R)", "(PIVOT_X − a cos ψ0, a sin ψ0)", `(${jc[0].toFixed(1)}, ${jc[1].toFixed(1)})`], ["PIN_Y closed", "JOINT_Y + √(c² − JOINT_X²)", Y0.toFixed(1) + " mm"],
+    ["CAR_TRAVEL", "PIN_Y(0°) − PIN_Y(30°)", travel(BMAX).toFixed(1) + " mm"], ["stop at payout", "N × CAR_TRAVEL", SSTOP.toFixed(1) + " mm"]].map(r => `<tr><td><code>${r[0]}</code></td><td>${r[1]}</td><td><b>${r[2]}</b></td></tr>`).join("");
+  const ol = document.getElementById("route");
+  ol.innerHTML = ROUTE.map(([k, t]) => `<li data-k="${k}">${t}</li>`).join("");
+  ol.addEventListener("pointerover", e => { const li = e.target.closest("li"); routeHL = li ? li.dataset.k : null; drawRear(cur); });
+  ol.addEventListener("pointerleave", () => { routeHL = null; drawRear(cur); });
+  const lay = document.getElementById("layers");
+  lay.innerHTML = GROUPS.map(([k, name, col]) => `<label><input type="checkbox" data-g="${k}" checked><span class="sw" style="background:var(--${col})"></span>${name}</label>`).join("");
+  lay.addEventListener("change", e => { show[e.target.dataset.g] = e.target.checked; draw3D(); });
+  const pr = document.getElementById("presets");
+  pr.innerHTML = [0, 60, 120, 150, 180, 240, 300].map(s => `<button type="button" data-s="${s}">${s}</button>`).join("");
+  pr.addEventListener("click", e => { const b = e.target.closest("button"); if (b) { stopPlay(); setS(+b.dataset.s); } });
+}
+
+// =====================================================================  3D views
+let main3, minis = [], explode = 0, boardMode = "solid";
+const VIEWS = {Iso: [-32, 18], "Iso back": [148, 20], Front: [0, 0], Back: [180, 0], Left: [90, 0], Right: [-90, 0], Top: [0, 90]};
+function setup3D() {
+  main3 = makeView(document.getElementById("c3d"), {cam: {yaw: -32, pitch: 18, zoom: 1.0}});
+  minis = [
+    [makeView(document.getElementById("vFront"), {cam: {yaw: 0, pitch: 0, zoom: 1.0, target: [0, 75, 0]}, maxDpr: 1.5}), "solid"],
+    [makeView(document.getElementById("vBack"), {cam: {yaw: 180, pitch: 0, zoom: 1.0, target: [0, 75, 0]}, maxDpr: 1.5}), "hidden"],
+    [makeView(document.getElementById("vSide"), {cam: {yaw: 90, pitch: 0, zoom: 1.0, target: [0, 75, -10]}, maxDpr: 1.5}), "hidden"],
+    [makeView(document.getElementById("vTop"), {cam: {yaw: 0, pitch: 90, zoom: 1.45, target: [0, 120, -10]}, maxDpr: 1.5}), "hidden"],
+  ];
+  const vb = document.getElementById("views");
+  vb.innerHTML = Object.keys(VIEWS).map(k => `<button type="button" data-v="${k}">${k}</button>`).join("") + `<button type="button" id="bBoard">Board: solid</button>`;
+  vb.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.id === "bBoard") { boardMode = boardMode === "solid" ? "hidden" : "solid"; b.textContent = "Board: " + boardMode; b.classList.toggle("on", boardMode === "hidden"); draw3D(); return; }
+    const [y, p] = VIEWS[b.dataset.v]; Object.assign(main3.cam, {yaw: y, pitch: p, panX: 0, panY: 0}); draw3D();
+  });
+  document.getElementById("explode").addEventListener("input", e => { explode = +e.target.value; draw3D(); });
+  // interaction
+  const cv = document.getElementById("c3d"); let drag = null;
+  cv.addEventListener("pointerdown", e => { drag = {x: e.clientX, y: e.clientY, pan: e.button === 2 || e.shiftKey}; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", e => {
+    if (drag) {
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+      if (drag.pan) { main3.cam.panX += dx; main3.cam.panY += dy; } else { main3.cam.yaw += dx * 0.4; main3.cam.pitch = Math.max(-89, Math.min(89, main3.cam.pitch + dy * 0.4)); }
+      draw3D(true);
+    } else hoverPick(e);
+  });
+  cv.addEventListener("pointerup", () => { drag = null; draw3D(); });
+  cv.addEventListener("contextmenu", e => e.preventDefault());
+  cv.addEventListener("wheel", e => { e.preventDefault(); main3.cam.zoom = Math.max(0.3, Math.min(8, main3.cam.zoom * Math.exp(-e.deltaY * 0.0015))); draw3D(); }, {passive: false});
+  cv.addEventListener("dblclick", () => { Object.assign(main3.cam, JSON.parse(JSON.stringify(main3.home))); draw3D(); });
+  cv.addEventListener("pointerleave", () => { hov.innerHTML = '<span class="hint">Point at a part.</span>'; });
+}
+const hov = document.getElementById("hover");
+function hoverPick(e) {
+  const k = main3.pick(e.clientX, e.clientY);
+  if (!k) { hov.innerHTML = '<span class="hint">Point at a part.</span>'; return; }
+  const m = META[k]; hov.innerHTML = `<b>${m[0]}</b><br>${m[1]}`;
+}
+let scene = null;
+function draw3D(onlyMain) {
+  main3.render(scene, explode, boardMode);
+  if (!onlyMain) for (const [v, bm] of minis) v.render(scene, 0, bm);
+}
+
+// =====================================================================  update loop
+const sl = document.getElementById("s"), playBtn = document.getElementById("play");
+const fDims = document.getElementById("fDims"), fGhost = document.getElementById("fGhost"), fBehind = document.getElementById("fBehind"), fLabels = document.getElementById("fLabels");
+const rMirror = document.getElementById("rMirror"), rLabels = document.getElementById("rLabels");
+let cur = state(0);
+function setS(s) { sl.value = s; update(+s); }
+function update(s) {
+  cur = state(s);
+  const q = (id, v) => document.getElementById(id).textContent = v;
+  q("vS", s.toFixed(0) + " mm"); q("vT", cur.t.toFixed(1) + " mm"); q("vB", cur.b.toFixed(2) + "°"); q("vA", cur.incl.toFixed(1) + "°");
+  q("vD", (cur.dev >= 0 ? "+" : "") + cur.dev.toFixed(2) + "°"); q("vG", cur.grip.toFixed(1) + " mm"); q("vP", cur.pin[1].toFixed(1) + " mm"); q("vM", cur.mu.toFixed(1) + "°");
+  scene = buildScene(cur);
+  draw3D();
+  drawFront(cur); drawRear(cur); drawSide(cur); drawRef(cur);
+  plotA(cur); plotD(cur);
+}
+sl.addEventListener("input", () => { stopPlay(); update(+sl.value); });
+for (const c of [fDims, fGhost, fBehind, fLabels]) c.addEventListener("change", () => drawFront(cur));
+for (const c of [rMirror, rLabels]) c.addEventListener("change", () => drawRear(cur));
+let raf = null, t0 = 0;
+function frame(t) {
+  if (!t0) t0 = t;
+  const ph = ((t - t0) / 7000) % 1, s = Math.round(300 * (0.5 - 0.5 * Math.cos(2 * Math.PI * ph)));
+  sl.value = s; update(s); raf = requestAnimationFrame(frame);
+}
+function stopPlay() { if (raf) cancelAnimationFrame(raf); raf = null; t0 = 0; playBtn.textContent = "▶ Play"; }
+playBtn.addEventListener("click", () => { if (raf) stopPlay(); else { playBtn.textContent = "❚❚ Pause"; raf = requestAnimationFrame(frame); } });
+
+// theme toggle
+document.getElementById("theme").addEventListener("click", () => {
+  const r = document.documentElement, now = isDark();
+  r.setAttribute("data-theme", now ? "light" : "dark");
+  readColours(); update(+sl.value);
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readColours(); update(+sl.value); });
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => draw3D(), 120); });
+
+// boot
+// URL options, e.g. design_explorer.html?s=300&theme=light&mirror=1
+const qs = new URLSearchParams(location.search);
+if (qs.get("theme") === "light" || qs.get("theme") === "dark") document.documentElement.setAttribute("data-theme", qs.get("theme"));
+if (qs.get("mirror") === "1") rMirror.checked = true;
+readColours(); staticTables(); setup3D(); buildPlots(); drawParts(); drawBoard(); drawFasteners();
+setS(Math.max(0, Math.min(300, +(qs.get("s") || 0))));
+})();
+</script>
+</body>
+</html>
