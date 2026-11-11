@@ -189,6 +189,48 @@ BENCH_GRIP_LEN_MM = 130.0           # [mm]
 BENCH_RETURN = "rubber band / bungee from the carriage plate to a screw at the top edge"   # ASSUMPTION, no spring spec
 BENCH_ETA = 0.90 * 0.97 ** 3        # [-] ASSUMPTION: 3 bearings; same model as A3
 
+# -- bench printed parts (read by cad/bench_parts.py). Values tagged SPEC are copied from docs/design_spec.md
+#    sections 1-2 (they were typed there and in bench_check.py, not here); ASSUMPTION = added 2026-11-10 with the STL export.
+BENCH_PIN_CLEARANCE_MM = 0.3        # [mm] SPEC CLEAR_PIN: every pin hole = pin + 0.3
+BENCH_GRIP_PAD_W_MM = 24.0          # [mm] SPEC P1: grip pad width
+BENCH_GRIP_PAD_L_MM = 60.0          # [mm] SPEC P1: grip pad length, along the grip (dowel) axis
+BENCH_GRIP_SCREW_HOLE_D_MM = 4.3    # [mm] SPEC P1: two wood-screw holes in the pad
+BENCH_GRIP_SCREW_OFFSET_MM = 20.0   # [mm] SPEC P1: the two holes sit at +/- this distance along the pad axis
+BENCH_HANDLE_FILLET_R_MM = 5.0      # [mm] SPEC P1: fillet on the handle's inside corners
+BENCH_POST_DEPTH_MM = 32.0          # [mm] SPEC P3: carriage post length behind the plate's back face
+BENCH_AXLE_BEHIND_PLATE_MM = 24.0   # [mm] SPEC P3: axle hole centre behind the plate's back face (same 24.0 as bench_check.layout)
+BENCH_FLANGE_T_MM = 1.0             # [mm] SPEC P5: flange washer thickness
+BENCH_SPACER_OD_MM = 24.0           # [mm] SPEC P4: left-handle spacer tube outside diameter (= 2 x hub radius)
+BENCH_STANDOFF_OD_MM = 10.0         # [mm] SPEC P4: standoff / carriage-pin spacer outside diameter
+BENCH_DEAD_END_CORD_GAP_MM = 1.0    # [mm] SPEC (bench_check.print_layout): dead-end standoff stops this far short of the near lane plane
+BENCH_BAND_HOLE_D_MM = 4.0          # [mm] SPEC P3: band hook "a notch or a hole dia 4"
+BENCH_BAND_HOLE_UPPER_XY_MM = (4.0, 54.5)   # [mm] ASSUMPTION, carriage frame. The spec puts the hook at the bar's top corner (8, 65); a dia-4 hole
+                                    #      cannot sit there with >= 2 mm walls next to the guide-bolt hole at (0, 60). Nearest place that can.
+BENCH_BAND_HOLE_LOWER_XY_MM = (4.0, -5.5)   # [mm] ASSUMPTION, carriage frame. Extra hole near the bottom of the bar: from the upper hook the band is
+                                    #      only ~12 mm long at closed and ~77 mm at the stop (6x stretch); from here it is ~73 -> ~148 mm (2x).
+BENCH_JOINT_CSK_D_MM = 11.0         # [mm] ASSUMPTION: 90 deg countersink on the handle's joint hole, for an M5 countersunk screw (head dia ~10).
+                                    #      Handle R lies flat on the board, so the joint pin can have neither head nor nut behind it.
+BENCH_JOINT_CSK_ANGLE_DEG = 90.0    # [deg] ASSUMPTION: standard metric countersunk head angle
+
+# -- bought hardware as plain envelopes, used ONLY by cad/bench_assembly.py for the interference check (not printed).
+#    ISO nominal sizes, rounded up; nuts and hex heads are modelled as cylinders across their corners.
+BENCH_HW_M5_NUT_D_MM = 9.2          # [mm] M5 nut, 8 mm across flats -> 9.2 across corners
+BENCH_HW_M5_NUT_H_MM = 5.0          # [mm] M5 nyloc nut height
+BENCH_HW_M5_HEAD_D_MM = 9.5         # [mm] M5 button / pan head diameter
+BENCH_HW_M5_HEAD_H_MM = 3.5         # [mm] head height = the "<= 3.5 mm proud" limit in design_spec.md section 3
+BENCH_HW_M5_WASHER_D_MM = 10.0      # [mm] M5 washer
+BENCH_HW_M5_WASHER_T_MM = 1.0       # [mm]
+BENCH_HW_M5_CSK_HEAD_D_MM = 10.0    # [mm] M5 countersunk head
+BENCH_HW_M8_HEAD_D_MM = 15.0        # [mm] M8 hex head / nut, 13 across flats -> 15 across corners
+BENCH_HW_M8_HEAD_H_MM = 5.3         # [mm]
+BENCH_HW_M8_NUT_H_MM = 6.8          # [mm]
+BENCH_HW_M8_WASHER_D_MM = 16.0      # [mm]
+BENCH_HW_M8_WASHER_T_MM = 1.6       # [mm]
+BENCH_HW_BOLT_LEN_MM = {"pivot_R": 35.0, "pivot_L": 50.0, "carriage_pin": 50.0, "F0": 50.0, "F1": 70.0, "dead_end": 45.0,
+                        "axle": 35.0, "guide": 30.0, "joint": 25.0}   # [mm] docs/buy_list.md
+BENCH_ANCHOR_NOTCH_DEPTH_MM = 3.0   # [mm] SPEC section 3: anchor-cord notch in the board's top edge
+BENCH_CHECK_TRAVELS_MM = (0.0, 15.0, 30.0, 45.0, 60.0, 75.0)   # [mm] carriage positions of the assembly check (design_spec.md section 7)
+
 # ---------------------------------------------------------------- architecture A reference (NOT selected)
 # Kept so kinematics.py can still print the spool/gear comparison from the design study.
 SPOOL_RADIUS_MIN_MM = 12.0          # [mm]

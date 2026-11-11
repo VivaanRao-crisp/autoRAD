@@ -13,7 +13,7 @@ Where delivery is a risk, the "local substitute" column works for a bench demo.
 | 6 | Bolt M5 × 45, flat head | dead end | 1 | M5 × 40–50 |
 | 7 | Bolt M5 × 35 | carriage axle | 1 | M5 × 30–40 |
 | 8 | Bolt M5 × 30 | guide bolt 2 | 1 | M5 × 25–35 |
-| 9 | Bolt M5 × 25 | joint pins | 2 | M5 × 20–30 |
+| 9 | Bolt M5 × 25, **countersunk head** | joint pins (head flush in the handle's countersink, see design_spec §8a) | 2 | M5 × 20–30 countersunk |
 | 10 | Nut M5 (nyloc preferred) | | 10 | plain nuts + a drop of glue |
 | 11 | Washer M5 | | 10 | |
 | 12 | Braided cord | 1–2 mm, low stretch (fishing braid, kite line, thin paracord) | 2 m | any thin non-stretch string |

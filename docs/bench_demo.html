@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>autoRAD Bench Rig</title>
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#ffffff; --ink:#1d1f23; --muted:#686c74; --line:#d9d5cc;
+  --board:#e7dcc4; --board-edge:#b9a985; --hole:#f6f4ef;
+  --handleR:#d9822b; --handleL:#2f74c8; --linkR:#d4a514; --linkL:#259b84;
+  --carriage:#c0392b; --steel:#7b8089; --cord:#7a3fbf; --cord2:#b48ae0; --band:#e05a8a;
+  --dowel:#9a7b4f; --accent:#c0392b;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a; --panel:#1e2125; --ink:#eceae5; --muted:#9ea3ab; --line:#33373d;
+    --board:#3b3527; --board-edge:#6d6248; --hole:#15171a;
+    --handleR:#f0994a; --handleL:#5b9bea; --linkR:#e8bd35; --linkL:#3fc0a6;
+    --carriage:#e5554a; --steel:#a2a7b0; --cord:#b98af0; --cord2:#7d5aa8; --band:#f07aa5;
+    --dowel:#b8976a; --accent:#e5554a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a; --panel:#1e2125; --ink:#eceae5; --muted:#9ea3ab; --line:#33373d;
+  --board:#3b3527; --board-edge:#6d6248; --hole:#15171a;
+  --handleR:#f0994a; --handleL:#5b9bea; --linkR:#e8bd35; --linkL:#3fc0a6;
+  --carriage:#e5554a; --steel:#a2a7b0; --cord:#b98af0; --cord2:#7d5aa8; --band:#f07aa5;
+  --dowel:#b8976a; --accent:#e5554a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:24px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 18px;max-width:780px}
+.controls{position:sticky;top:0;z-index:2;background:var(--bg);padding:10px 0 12px;border-bottom:1px solid var(--line);margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center}
+.controls label{font-weight:600}
+input[type=range]{flex:1 1 280px;accent-color:var(--accent)}
+button{font:inherit;padding:6px 16px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card h2{font-size:15px;margin:0 0 2px}
+.card p{margin:0 0 8px;color:var(--muted);font-size:13px}
+svg{width:100%;height:auto;display:block}
+.steps{counter-reset:s;list-style:none;padding:0;margin:16px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.steps li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.steps li::before{counter-increment:s;content:counter(s);display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:12px;margin-right:8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.note{color:var(--muted);font-size:12.5px;margin-top:14px}
+text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<main>
+  <h1>autoRAD bench rig: how it moves</h1>
+  <p class="sub">Drag the slider or press Play. One cord is tied to a fixed hook. As the attachment moves down, the cord pulls the carriage down, and the carriage pulls both handles open through two links. There are no gears. Numbers come from <code>params.py</code>, using the same equations as <code>bench_check.py</code>.</p>
+
+  <div class="controls">
+    <label for="s">Cord payout (= attachment travel)</label>
+    <input id="s" type="range" min="0" max="300" step="1" value="0">
+    <button id="play" type="button">Play</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="vS">0 mm</b><span>cord paid out</span></div>
+    <div class="stat"><b id="vT">0.0 mm</b><span>carriage moved down (= payout ÷ 4)</span></div>
+    <div class="stat"><b id="vB">0.0°</b><span>each handle rotated</span></div>
+    <div class="stat"><b id="vA">50.0°</b><span>included angle (target 50 → 110°)</span></div>
+    <div class="stat"><b id="vG">106 mm</b><span>grip-centre spacing</span></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Front of the board: handles and links</h2>
+      <p>The carriage (red, faded) is behind the board. Its pin comes through slot 1 and carries both links.</p>
+      <svg id="front" viewBox="-175 -292 350 440" role="img" aria-label="Front view of the handles and links"></svg>
+      <div class="legend">
+        <span><i style="background:var(--handleR)"></i>handle R (layer 1)</span>
+        <span><i style="background:var(--linkR)"></i>link R (2)</span>
+        <span><i style="background:var(--linkL)"></i>link L (3)</span>
+        <span><i style="background:var(--handleL)"></i>handle L (4)</span>
+        <span><i style="background:var(--carriage)"></i>carriage</span>
+        <span><i style="background:var(--dowel)"></i>dowel grip</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Behind the board: the cord</h2>
+      <p>Seen through the board from the front. The cord makes 4 vertical runs between the carriage bearings (M1, M2) and the fixed bearings (F0, F1). Solid = near lane, dashed = far lane.</p>
+      <svg id="rear" viewBox="-110 -308 220 338" role="img" aria-label="Rear view of the cord routing"></svg>
+      <div class="legend">
+        <span><i style="background:var(--cord)"></i>cord</span>
+        <span><i style="background:var(--carriage)"></i>carriage</span>
+        <span><i style="background:var(--steel)"></i>bearings / bolts</span>
+        <span><i style="background:var(--band)"></i>return band</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Included angle vs travel</h2>
+    <p>Solid: what the linkage gives. Dashed: a perfectly linear 50° → 110°. The largest difference is about 1°.</p>
+    <svg id="plot" viewBox="0 0 640 230" role="img" aria-label="Angle versus travel plot"></svg>
+  </div>
+
+  <ol class="steps">
+    <li><b>Cord pays out.</b> The hook stays put and the attachment moves down 300 mm, so 300 mm of cord comes off the board.</li>
+    <li><b>Carriage moves ¼ as far.</b> The cord runs 4 times between the carriage and the fixed bearings, so the carriage slides down 75 mm.</li>
+    <li><b>One pin pulls both links.</b> Both links hang from the same carriage pin, so the two handles always match.</li>
+    <li><b>Bell cranks rotate.</b> The links pull the drive arms down and inward. Each handle turns 30° about its pivot.</li>
+    <li><b>The band closes it.</b> Going back up, the band pulls the carriage up again, takes the cord back in and closes the handles.</li>
+  </ol>
+  <p class="note">This is a 2D picture of the verified kinematics, not a test result. Bolts, washers and the board's thickness are left out. Plate layers (front to back): handle R, link R, link L, handle L.</p>
+</main>
+
+<script>
+(() => {
+  // ---- parameters (params.py, design_spec.md section 1)
+  const S_CLOSED = 106, DELTA_S = 70, TH = 3, BMAX = 30, A = 125.9, C = 120, PSI = 42, N = 4;
+  const HUB_R = 12, BOSS_R = 8, ARM_W = 16, LINK_W = 12, PAD_W = 24, PAD_L = 60, DOWEL_D = 20, DOWEL_L = 130;
+  const BOARD = {x0: -100, x1: 100, y0: -20, y1: 270};
+  const rad = d => d * Math.PI / 180;
+  const L = DELTA_S / (2 * (Math.sin(rad(TH + BMAX)) - Math.sin(rad(TH))));
+  const P = S_CLOSED - 2 * L * Math.sin(rad(TH));
+  const OX = P / 2;
+
+  // ---- kinematics (kinematics_D.py)
+  const joint = b => { const a = rad(180 - PSI + b); return [OX + A * Math.cos(a), A * Math.sin(a)]; };
+  const pinY = b => { const [x, y] = joint(b); return y + Math.sqrt(C * C - x * x); };
+  const Y0 = pinY(0);
+  const travel = b => Y0 - pinY(b);
+  const SSTOP = N * travel(BMAX);
+  const betaOf = s => {
+    const t = Math.min(s, SSTOP) / N; let lo = 0, hi = BMAX;
+    for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (travel(m) < t) lo = m; else hi = m; }
+    return (lo + hi) / 2;
+  };
+  const YC1 = pinY(BMAX);
+
+  // ---- board-layout values (bench_check.layout)
+  const R = 8, AX_ABOVE = 45, X1 = -22, X2 = -6, GAP = 8;
+  const YF = YC1 + AX_ABOVE - R - GAP - R;           // fixed bearing row
+  const XF1 = (X1 + X2) / 2, XF0 = X1 - R, XANC = X1 - 2 * R, YDEAD = 95;
+  const SLOT1 = [YC1 - 2.65 - 0.5, Y0 + 2.65 + 0.5], SLOT2 = [YC1 + 60 - 3.15, Y0 + 60 + 3.15];
+
+  // ---- svg helpers (y up in mm -> y down in svg)
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (parent, tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+  const pt = (x, y) => `${x.toFixed(2)},${(-y).toFixed(2)}`;
+  const setLine = (e, a, b) => { e.setAttribute("x1", a[0]); e.setAttribute("y1", -a[1]); e.setAttribute("x2", b[0]); e.setAttribute("y2", -b[1]); };
+  const setCirc = (e, c) => { e.setAttribute("cx", c[0]); e.setAttribute("cy", -c[1]); };
+  const rect = (g, x0, x1, y0, y1, attrs) => el(g, "rect", Object.assign({x: x0, y: -y1, width: x1 - x0, height: y1 - y0}, attrs));
+  const label = (g, x, y, t, attrs) => { const e = el(g, "text", Object.assign({x, y: -y, "font-size": 7, fill: "var(--muted)"}, attrs || {})); e.textContent = t; return e; };
+
+  // ================= FRONT VIEW
+  const F = document.getElementById("front");
+  const gCar = el(F, "g", {opacity: 0.35});
+  const carParts = [
+    rect(gCar, 0, 0, 0, 0, {fill: "var(--carriage)"}), rect(gCar, 0, 0, 0, 0, {fill: "var(--carriage)"}),
+  ];
+  rect(F, BOARD.x0, BOARD.x1, BOARD.y0, BOARD.y1, {fill: "var(--board)", "fill-opacity": 0.72, stroke: "var(--board-edge)", "stroke-width": 1, rx: 2});
+  for (const [a, b] of [SLOT1, SLOT2]) rect(F, -2.65, 2.65, a, b, {fill: "var(--hole)", stroke: "var(--board-edge)", "stroke-width": 0.5, rx: 2.6});
+  label(F, 6, SLOT1[0] + 4, "slot 1"); label(F, 6, SLOT2[1] - 8, "slot 2");
+  for (const s of [1, -1]) { el(F, "circle", {cx: s * OX, cy: 0, r: 4.15, fill: "var(--hole)"}); }
+
+  function makeHandle(colour) {
+    const g = el(F, "g", {});
+    const pad = el(g, "polygon", {fill: colour});
+    const dowel = el(g, "line", {stroke: "var(--dowel)", "stroke-width": DOWEL_D, "stroke-opacity": 0.85});
+    const arm1 = el(g, "line", {stroke: colour, "stroke-width": ARM_W, "stroke-linecap": "round"});
+    const arm2 = el(g, "line", {stroke: colour, "stroke-width": ARM_W, "stroke-linecap": "round"});
+    const hub = el(g, "circle", {r: HUB_R, fill: colour});
+    const hJoint = el(g, "circle", {r: 2.65, fill: "var(--hole)"});
+    const hPivot = el(g, "circle", {r: 4.15, fill: "var(--steel)"});
+    return {g, pad, dowel, arm1, arm2, hub, hJoint, hPivot};
+  }
+  function makeLink(colour) {
+    const g = el(F, "g", {});
+    const bar = el(g, "line", {stroke: colour, "stroke-width": LINK_W});
+    const b1 = el(g, "circle", {r: BOSS_R, fill: colour});
+    const b2 = el(g, "circle", {r: BOSS_R, fill: colour});
+    const p1 = el(g, "circle", {r: 2.5, fill: "var(--steel)"});
+    const p2 = el(g, "circle", {r: 2.5, fill: "var(--steel)"});
+    return {bar, b1, b2, p1, p2};
+  }
+  const hR = makeHandle("var(--handleR)");
+  const lR = makeLink("var(--linkR)");
+  const lL = makeLink("var(--linkL)");
+  const hL = makeHandle("var(--handleL)");
+  const pinMark = el(F, "circle", {r: 3, fill: "var(--carriage)", stroke: "var(--panel)", "stroke-width": 1});
+  const pinLabel = label(F, 0, 0, "carriage pin", {"font-size": 7, fill: "var(--ink)"});
+  label(F, OX + 15, -6, "pivot R"); label(F, -OX - 40, -6, "pivot L");
+
+  function drawHandle(h, b, side) {
+    const m = ([x, y]) => [side * x, y];
+    const O = [side * OX, 0];
+    const J = m(joint(b));
+    const th = rad(TH + b);
+    const G = m([OX + L * Math.sin(th), -L * Math.cos(th)]);
+    const t = rad(25 + b);
+    const u = [-side * Math.sin(t), Math.cos(t)], v = [side * Math.cos(t), Math.sin(t)];
+    const P4 = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a, c]) => [G[0] + a * PAD_L / 2 * u[0] + c * PAD_W / 2 * v[0], G[1] + a * PAD_L / 2 * u[1] + c * PAD_W / 2 * v[1]]);
+    h.pad.setAttribute("points", P4.map(q => pt(q[0], q[1])).join(" "));
+    setLine(h.dowel, [G[0] - u[0] * DOWEL_L / 2, G[1] - u[1] * DOWEL_L / 2], [G[0] + u[0] * DOWEL_L / 2, G[1] + u[1] * DOWEL_L / 2]);
+    setLine(h.arm1, O, J); setLine(h.arm2, O, G);
+    setCirc(h.hub, O); setCirc(h.hPivot, O); setCirc(h.hJoint, J);
+    return {J, G};
+  }
+  function drawLink(l, J, C0) {
+    setLine(l.bar, J, C0); setCirc(l.b1, J); setCirc(l.b2, C0); setCirc(l.p1, J); setCirc(l.p2, C0);
+  }
+
+  // ================= REAR VIEW
+  const Rr = document.getElementById("rear");
+  rect(Rr, BOARD.x0, BOARD.x1, BOARD.y0, BOARD.y1, {fill: "var(--board)", "fill-opacity": 0.45, stroke: "var(--board-edge)", "stroke-width": 1, rx: 2});
+  for (const [a, b] of [SLOT1, SLOT2]) rect(Rr, -2.65, 2.65, a, b, {fill: "var(--hole)", "fill-opacity": 0.8, rx: 2.6});
+  // notch + hook above
+  rect(Rr, XANC - 1.5, XANC + 1.5, BOARD.y1 - 3, BOARD.y1, {fill: "var(--hole)"});
+  el(Rr, "path", {d: `M ${XANC - 10} ${-300} L ${XANC + 10} ${-300} M ${XANC} ${-300} L ${XANC} ${-296} A 3 3 0 1 0 ${XANC + 3} ${-293}`, stroke: "var(--ink)", "stroke-width": 1.4, fill: "none"});
+  label(Rr, XANC + 6, 297, "fixed hook (anchor)", {fill: "var(--ink)"});
+  label(Rr, XANC + 4, 274, "notch");
+  // fixed bearings + dead end
+  for (const [x, name] of [[XF0, "F0"], [XF1, "F1"]]) {
+    el(Rr, "circle", {cx: x, cy: -YF, r: 10, fill: "none", stroke: "var(--steel)", "stroke-width": 0.6, "stroke-dasharray": "1.5 1.5"});
+    el(Rr, "circle", {cx: x, cy: -YF, r: R, fill: "var(--steel)", "fill-opacity": 0.5, stroke: "var(--steel)"});
+    el(Rr, "circle", {cx: x, cy: -YF, r: 2.5, fill: "var(--steel)"});
+    label(Rr, x - 4, YF - 18, name, {fill: "var(--ink)"});
+  }
+  el(Rr, "circle", {cx: X2, cy: -YDEAD, r: 5, fill: "var(--steel)"});
+  label(Rr, X2 + 8, YDEAD - 2, "dead end (cord tied here)");
+  label(Rr, 14, YF - 26, "fixed row, bolted to the board");
+  // band screw
+  el(Rr, "circle", {cx: 20, cy: -262, r: 2.5, fill: "var(--steel)"});
+  label(Rr, 25, 263, "band screw");
+
+  const gRC = el(Rr, "g", {});
+  const rc = {
+    vbar: rect(gRC, 0, 0, 0, 0, {fill: "var(--carriage)", "fill-opacity": 0.85}),
+    hbar: rect(gRC, 0, 0, 0, 0, {fill: "var(--carriage)", "fill-opacity": 0.85}),
+    post: rect(gRC, 0, 0, 0, 0, {fill: "var(--carriage)"}),
+    m1: rect(gRC, 0, 0, 0, 0, {fill: "var(--steel)", rx: 1}),
+    m2: rect(gRC, 0, 0, 0, 0, {fill: "var(--steel)", rx: 1}),
+    axle: el(gRC, "line", {stroke: "var(--steel)", "stroke-width": 2.5}),
+    pin: el(gRC, "circle", {r: 2.65, fill: "var(--hole)"}),
+    guide: el(gRC, "circle", {r: 2.65, fill: "var(--hole)"}),
+  };
+  const band = el(Rr, "line", {stroke: "var(--band)", "stroke-width": 1.6, "stroke-linecap": "round"});
+  const cordNear = el(Rr, "path", {fill: "none", stroke: "var(--cord)", "stroke-width": 1.5, "stroke-linejoin": "round"});
+  const cordFar = el(Rr, "path", {fill: "none", stroke: "var(--cord)", "stroke-width": 1.5, "stroke-dasharray": "3 2"});
+  const m1Label = label(Rr, 0, 0, "M1", {fill: "var(--ink)"});
+  const m2Label = label(Rr, 0, 0, "M2", {fill: "var(--ink)"});
+  const carLabel = label(Rr, 0, 0, "carriage", {fill: "var(--carriage)", "font-weight": 600});
+  const pullArrow = el(Rr, "text", {x: XANC - 58, y: -283, "font-size": 7.5, fill: "var(--cord)", "font-weight": 600});
+
+  const off = 1.3; // visual offset between the near and far lanes (same x in reality)
+  function drawRear(yc) {
+    const set = (r, x0, x1, y0, y1) => { r.setAttribute("x", x0); r.setAttribute("y", -y1); r.setAttribute("width", x1 - x0); r.setAttribute("height", y1 - y0); };
+    set(rc.vbar, -4, 8, yc - 10, yc + 65); set(rc.hbar, -32, 8, yc + 55, yc + 65); set(rc.post, -19, -9, yc + 35, yc + 55);
+    const ya = yc + AX_ABOVE;
+    set(rc.m1, X1 - 2.5, X1 + 2.5, ya - R, ya + R); set(rc.m2, X2 - 2.5, X2 + 2.5, ya - R, ya + R);
+    setLine(rc.axle, [X1 - 6, ya], [X2 + 6, ya]);
+    setCirc(rc.pin, [0, yc]); setCirc(rc.guide, [0, yc + 60]);
+    setLine(band, [4, yc - 5.5], [20, 262]);
+    m1Label.setAttribute("x", X1 - 16); m1Label.setAttribute("y", -(ya + 2));
+    m2Label.setAttribute("x", X2 + 10); m2Label.setAttribute("y", -(ya - 14));
+    carLabel.setAttribute("x", -72); carLabel.setAttribute("y", -(yc + 58));
+    const top = ya + R;
+    // near lane: anchor -> under F0 -> up to M1 ; and M2 -> down to dead end
+    const rN0 = ((X1 - off) - XANC) / 2;
+    cordNear.setAttribute("d",
+      `M ${XANC} ${-300} L ${XANC} ${-YF} A ${rN0} ${rN0} 0 0 0 ${X1 - off} ${-YF} L ${X1 - off} ${-top}` +
+      ` M ${X2 - off} ${-top} L ${X2 - off} ${-YDEAD}`);
+    // far lane: M1 -> down -> under F1 -> up to M2
+    const rF = ((X2 + off) - (X1 + off)) / 2;
+    cordFar.setAttribute("d",
+      `M ${X1 + off} ${-top} L ${X1 + off} ${-YF} A ${rF} ${rF} 0 0 0 ${X2 + off} ${-YF} L ${X2 + off} ${-top}`);
+  }
+
+  // ================= PLOT
+  const PL = document.getElementById("plot");
+  const px = s => 50 + s / 300 * 560, py = a => 195 - (a - 50) / 60 * 170;
+  for (let a = 50; a <= 110; a += 10) {
+    el(PL, "line", {x1: 50, x2: 610, y1: py(a), y2: py(a), stroke: "var(--line)", "stroke-width": 1});
+    const t = el(PL, "text", {x: 42, y: py(a) + 4, "font-size": 11, fill: "var(--muted)", "text-anchor": "end"}); t.textContent = a + "°";
+  }
+  for (let s = 0; s <= 300; s += 60) {
+    const t = el(PL, "text", {x: px(s), y: 214, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle"}); t.textContent = s;
+  }
+  const xl = el(PL, "text", {x: 610, y: 228, "font-size": 11, fill: "var(--muted)", "text-anchor": "end"}); xl.textContent = "cord payout [mm]";
+  el(PL, "line", {x1: px(0), y1: py(50), x2: px(300), y2: py(110), stroke: "var(--muted)", "stroke-width": 1.2, "stroke-dasharray": "5 4"});
+  let d = "";
+  for (let s = 0; s <= 300; s += 2) d += (s ? " L " : "M ") + px(s).toFixed(1) + " " + py(50 + 2 * betaOf(s)).toFixed(1);
+  el(PL, "path", {d, fill: "none", stroke: "var(--accent)", "stroke-width": 2.2});
+  const cursor = el(PL, "line", {y1: py(110) - 6, y2: py(50), stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "2 3"});
+  const dot = el(PL, "circle", {r: 5, fill: "var(--accent)", stroke: "var(--panel)", "stroke-width": 2});
+
+  // ================= UPDATE
+  const slider = document.getElementById("s");
+  const out = id => document.getElementById(id);
+  function update(s) {
+    const b = betaOf(s), yc = pinY(b), tr = Y0 - yc;
+    const cR = [0, yc];
+    // carriage behind the board in the front view
+    const [cv, ch] = carParts;
+    cv.setAttribute("x", -4); cv.setAttribute("y", -(yc + 65)); cv.setAttribute("width", 12); cv.setAttribute("height", 75);
+    ch.setAttribute("x", -32); ch.setAttribute("y", -(yc + 65)); ch.setAttribute("width", 40); ch.setAttribute("height", 10);
+    const R1 = drawHandle(hR, b, 1);
+    const L1 = drawHandle(hL, b, -1);
+    drawLink(lR, R1.J, cR); drawLink(lL, L1.J, cR);
+    setCirc(pinMark, cR); pinLabel.setAttribute("x", 10); pinLabel.setAttribute("y", -(yc + 3));
+    drawRear(yc);
+    pullArrow.textContent = `↑ ${Math.round(s)} mm of cord paid out`;
+    const ang = 50 + 2 * b;
+    const gap = P + 2 * L * Math.sin(rad(TH + b));
+    out("vS").textContent = Math.round(s) + " mm";
+    out("vT").textContent = tr.toFixed(1) + " mm";
+    out("vB").textContent = b.toFixed(1) + "°";
+    out("vA").textContent = ang.toFixed(1) + "°";
+    out("vG").textContent = gap.toFixed(0) + " mm";
+    cursor.setAttribute("x1", px(s)); cursor.setAttribute("x2", px(s));
+    dot.setAttribute("cx", px(s)); dot.setAttribute("cy", py(ang));
+  }
+  slider.addEventListener("input", () => { stop(); update(+slider.value); });
+
+  // ================= PLAY
+  const btn = document.getElementById("play");
+  let raf = null, t0 = 0;
+  const PERIOD = 7000;
+  function frame(t) {
+    if (!t0) t0 = t - (+slider.value / 300) * PERIOD / 2;
+    const ph = ((t - t0) % PERIOD) / PERIOD;            // 0..1: open then close
+    const k = ph < 0.5 ? ph * 2 : 2 - ph * 2;
+    const e = 0.5 - 0.5 * Math.cos(Math.PI * k);        // ease at the ends
+    const s = 300 * e;
+    slider.value = s.toFixed(0);
+    update(s);
+    raf = requestAnimationFrame(frame);
+  }
+  function stop() { if (raf) cancelAnimationFrame(raf); raf = null; t0 = 0; btn.textContent = "Play"; }
+  btn.addEventListener("click", () => {
+    if (raf) { stop(); return; }
+    btn.textContent = "Pause"; raf = requestAnimationFrame(frame);
+  });
+
+  update(0);
+  window.__bench = {betaOf, pinY, Y0, SSTOP, L, P, YF};
+})();
+</script>
+</body>
+</html>

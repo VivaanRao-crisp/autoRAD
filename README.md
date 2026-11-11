@@ -3,6 +3,9 @@
 **Start here:** `docs/design_spec.md` (what to build), `docs/buy_list.md`, `docs/demo_sheet.md`,
 `docs/img/board_template_1to1.pdf`. Checks: `python3 bench_check.py --template`. History: `iteration_log.md`, `CHANGELOG.md`.
 
+**Print files:** `exports/stl/` (ready for the slicer), `exports/step/` (for Fusion / Inventor), list in `parts_list.md`.
+Made by `cad/bench_parts.py`; checked by `cad/check_stl.py` and `cad/bench_assembly.py`. Needs `pip install cadquery trimesh networkx scipy matplotlib`.
+
 ---
 *Older material below (design study of architectures A-E and the full-attachment option D) is kept for the report.*
 

@@ -172,6 +172,21 @@ joint bosses); carriage pin (revolute, both links to the carriage); carriage ↔
 0 … −75 mm). Drive the slider; the handles must follow with no other constraints. If the loop
 doesn't close, a length is wrong.
 
+## 8a. STL export (2026-11-10) — two differences from §2, and open points
+
+Print files: `exports/stl/` (print orientation), `exports/step/` (design frame), list in `parts_list.md`.
+
+1. **P1 handle:** the joint hole has a 90° countersink Ø11 on the back face. Handle R lies flat on the
+   board, so the joint pin cannot have a head or nut behind it. Use **M5 × 25 countersunk** screws for the
+   two joint pins, head flush in the handle, nut on the link side. The left handle is the same part turned over.
+2. **P3 carriage:** the band hook is two Ø4 holes at (4, 54.5) and (4, −5.5) in the carriage frame. Use the
+   lower one: from the top of the carriage the band would be ~12 mm long at closed and ~77 mm at the stop.
+
+Open, not changed (assembly check, `out/bench_assembly_run.txt`): right arm to the left-handle spacer
+0.51 mm at full open; flange washers and the post overlap by 0.5 mm per side (leave out the two washers
+beside the post); F1 / F0 bearings sit 1 mm behind the lane plane (standoffs 37.5 / 21.5 do not allow for
+the 1 mm flange); wall beside the carriage pin hole 1.35 mm; handle bed footprint 167 × 167 mm.
+
 ## 9. What is deliberately simplified (say so in the report)
 
 No housing, no guards, not machine-mountable, no spool and no gears (replaced by a 4-part reeved
